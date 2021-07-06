@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/dolmen-go/contextio"
-	"github.com/zach-klippenstein/goadb"
+	adb "github.com/zach-klippenstein/goadb"
 )
 
 func getAdb() (*adb.Adb, *adb.Device) {

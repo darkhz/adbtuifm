@@ -9,10 +9,10 @@ import (
 	"strings"
 
 	"github.com/dolmen-go/contextio"
-	"github.com/zach-klippenstein/goadb"
+	adb "github.com/zach-klippenstein/goadb"
 )
 
-var setHidden bool = true
+var setHidden bool
 
 func isDir(pane *dirPane, testPath string) bool {
 	name := pane.pathList[pane.row].Name

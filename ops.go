@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	jobNum  int = 0
+	jobNum  int
 	jobList []opsWork
 
 	opPathLock sync.Mutex

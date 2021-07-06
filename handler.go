@@ -5,7 +5,7 @@ var (
 	opPaths   []string
 	copyPath  string
 	pastePath string
-	opsLock   bool = false
+	opsLock   bool
 )
 
 func modeSwitchHandler(pane *dirPane) {

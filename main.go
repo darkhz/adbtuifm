@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	"gopkg.in/alecthomas/kingpin.v2"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
@@ -55,6 +56,10 @@ func main() {
 
 	initAPath = *cmdAPath
 	initLPath = *cmdLPath
+
+	jobNum = 0
+	opsLock = false
+	setHidden = true
 
 	setupUI()
 }

@@ -33,8 +33,8 @@ func setupPaneView() *tview.Flex {
 	var leftpane = dirPane{tview.NewTable(), 0, initMode, initPath, initAPath, initLPath, nil}
 	var rightpane = dirPane{tview.NewTable(), 0, initMode, initPath, initAPath, initLPath, nil}
 
-	var selPane *dirPane = &leftpane
-	var auxPane *dirPane = &rightpane
+	selPane := &leftpane
+	auxPane := &rightpane
 
 	prevPane = selPane
 
