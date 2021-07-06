@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"errors"
+	"path"
+	"path/filepath"
 	"strconv"
 
 	"github.com/rivo/tview"
@@ -42,7 +44,8 @@ func (o *opsWork) updateOpsView(col int, msg string) {
 func (o *opsWork) opErr(sterr statusError) {
 	app.QueueUpdateDraw(func() {
 		if sterr == createError {
-			showError(sterr, o.dst)
+			_, fname := filepath.Split(path.Clean(o.src))
+			showError(sterr, o.dst+fname)
 		} else if sterr == notImplError {
 			showError(sterr, o.ops.String())
 		} else {
