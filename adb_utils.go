@@ -126,13 +126,13 @@ func (o *opsWork) adbToadbOps(device *adb.Device) {
 	case opMove:
 		cmd = "mv"
 	case opCopy:
-		if isDir(o.pane, o.src) {
+		if o.pane.isDir(o.src) {
 			cmd = "cp -r"
 		} else {
 			cmd = "cp"
 		}
 	case opDelete:
-		if isDir(o.pane, o.src) {
+		if o.pane.isDir(o.src) {
 			cmd = "rm -rf"
 		} else {
 			cmd = "rm"
@@ -182,7 +182,7 @@ func (p *dirPane) adbListDir(testPath string) {
 		return
 	}
 
-	if p.pathList != nil && !isDir(p, testPath) {
+	if p.pathList != nil && !p.isDir(testPath) {
 		return
 	}
 

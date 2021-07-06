@@ -14,11 +14,11 @@ import (
 
 var setHidden bool
 
-func isDir(pane *dirPane, testPath string) bool {
-	name := pane.pathList[pane.row].Name
-	fmode := pane.pathList[pane.row].Mode
+func (p *dirPane) isDir(testPath string) bool {
+	name := p.pathList[p.row].Name
+	fmode := p.pathList[p.row].Mode
 
-	if pane.mode == mAdb && fmode&os.ModeSymlink != 0 {
+	if p.mode == mAdb && fmode&os.ModeSymlink != 0 {
 		return isSymDir(testPath, name)
 	}
 
@@ -87,7 +87,7 @@ func (p *dirPane) ChangeDir(cdFwd bool, cdBack bool) {
 	row := p.row
 	testPath := p.path
 
-	if cdFwd && p.pathList != nil && !isDir(p, testPath) {
+	if cdFwd && p.pathList != nil && !p.isDir(testPath) {
 		return
 	}
 
