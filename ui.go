@@ -199,6 +199,7 @@ func showConfirmModal(msg string, Dofunc func()) {
 		})
 
 	pages.AddAndSwitchToPage("modal", modal(msgbox, 80, 29), true).ShowPage("main")
+	app.SetFocus(msgbox)
 }
 
 func modal(p tview.Primitive, width, height int) tview.Primitive {
