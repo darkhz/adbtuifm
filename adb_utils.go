@@ -20,7 +20,7 @@ func getAdb() (*adb.Adb, *adb.Device) {
 	device := client.Device(adb.AnyDevice())
 
 	state, err := device.State()
-	if err != nil || state.String() != "StateOnline" {
+	if err != nil || state != adb.StateOnline {
 		if app != nil {
 			showError(errors.New("Could not find ADB-connected device"), "")
 		}
