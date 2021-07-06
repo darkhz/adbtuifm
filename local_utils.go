@@ -22,8 +22,7 @@ func isDir(pane *dirPane, testPath string) bool {
 		return isSymDir(testPath, name)
 	}
 
-	modeDir := fmode.IsDir()
-	if !modeDir {
+	if !fmode.IsDir() {
 		return false
 	}
 
@@ -112,8 +111,8 @@ func (p *dirPane) ChangeDir(cdFwd bool, cdBack bool) {
 	p.path = filepath.ToSlash(trimPath(testPath, false))
 
 	sort.Slice(list, func(i, j int) bool {
-		if strings.HasSuffix(list[i].Name, "/") != (strings.HasSuffix(list[j].Name, "/")) {
-			return strings.HasSuffix(list[i].Name, "/")
+		if list[i].Mode.IsDir() != list[j].Mode.IsDir() {
+			return list[i].Mode.IsDir()
 		}
 
 		return list[i].Name < list[j].Name
