@@ -143,6 +143,7 @@ func (o *opsWork) adbToadbOps(device *adb.Device) {
 	cmd = cmd + param
 	_, err := device.RunCommand(cmd)
 	if err != nil {
+		showError(unknownError, "during an ADB "+o.ops.String()+" operation")
 		return
 	}
 
