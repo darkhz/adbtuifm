@@ -83,6 +83,18 @@ func trimPath(testPath string, cdBack bool) string {
 	return testPath
 }
 
+func checkPath(testPath string) bool {
+	fi, err := os.Stat(testPath)
+	if err != nil {
+		return false
+	}
+	if !fi.Mode().IsDir() {
+		return false
+	}
+
+	return true
+}
+
 func (p *dirPane) ChangeDir(cdFwd bool, cdBack bool) {
 	row := p.row
 	testPath := p.path
@@ -109,6 +121,10 @@ func (p *dirPane) ChangeDir(cdFwd bool, cdBack bool) {
 	list := p.pathList
 
 	p.path = filepath.ToSlash(trimPath(testPath, false))
+
+	if list == nil {
+		return
+	}
 
 	sort.Slice(list, func(i, j int) bool {
 		if list[i].Mode.IsDir() != list[j].Mode.IsDir() {

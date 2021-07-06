@@ -162,6 +162,8 @@ func setupPane(selPane *dirPane, auxPane *dirPane) {
 			}
 			selPane.ChangeDir(false, false)
 			auxPane.ChangeDir(false, false)
+		case 'G':
+			selPane.showChangeDirInput()
 		case 'q':
 			stopApp()
 		}
@@ -200,6 +202,31 @@ func showConfirmModal(msg string, Dofunc func()) {
 
 	pages.AddAndSwitchToPage("modal", modal(msgbox, 80, 29), true).ShowPage("main")
 	app.SetFocus(msgbox)
+}
+
+func (p *dirPane) showChangeDirInput() {
+	input := tview.NewInputField()
+	input.SetTitle("Change Directory to:")
+	input.SetTitleAlign(tview.AlignCenter)
+	input.SetBorder(true)
+
+	input.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyEscape:
+			pages.SwitchToPage("main")
+			app.SetFocus(prevPane.tbl)
+		case tcell.KeyEnter:
+			pages.SwitchToPage("main")
+			app.SetFocus(prevPane.tbl)
+			p.path = trimPath(input.GetText(), false)
+			p.ChangeDir(false, false)
+		}
+
+		return event
+	})
+
+	pages.AddAndSwitchToPage("modal", modal(input, 80, 3), true).ShowPage("main")
+	app.SetFocus(input)
 }
 
 func modal(p tview.Primitive, width, height int) tview.Primitive {
