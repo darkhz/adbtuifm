@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"sync"
 )
 
@@ -91,7 +90,7 @@ func checkOpPaths(opPath string) bool {
 
 	for _, name := range opPaths {
 		if name == opPath {
-			showError(errors.New("Already operating on"), name)
+			showError(openError, "Operating on "+opPath)
 			return true
 		}
 	}

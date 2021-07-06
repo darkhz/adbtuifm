@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -22,7 +21,7 @@ func getAdb() (*adb.Adb, *adb.Device) {
 	state, err := device.State()
 	if err != nil || state != adb.StateOnline {
 		if app != nil {
-			showError(errors.New("Could not find ADB-connected device"), "")
+			showError(adbError, "")
 		}
 		return client, nil
 	}
@@ -41,22 +40,22 @@ func checkAdb() bool {
 
 func (o *opsWork) adbTolocalOps(device *adb.Device) {
 	if o.ops == opMove || o.ops == opDelete {
-		o.opLog(notImplError, nil)
+		o.opErr(notImplError)
 		return
 	}
 
 	_, err := device.Stat(o.src)
 	if adb.HasErrCode(err, adb.ErrCode(adb.FileNoExistError)) {
-		o.opLog(openError, err)
+		o.opErr(openError)
 		return
 	} else if err != nil {
-		o.opLog(statError, err)
+		o.opErr(statError)
 		return
 	}
 
 	remote, err := device.OpenRead(o.src)
 	if err != nil {
-		o.opLog(openError, err)
+		o.opErr(openError)
 		return
 	}
 	defer remote.Close()
@@ -64,7 +63,7 @@ func (o *opsWork) adbTolocalOps(device *adb.Device) {
 	_, fname := filepath.Split(o.src)
 	local, err := os.Create(o.dst + fname)
 	if err != nil {
-		o.opLog(createError, err)
+		o.opErr(createError)
 		return
 	}
 	defer local.Close()
@@ -79,20 +78,20 @@ func (o *opsWork) adbTolocalOps(device *adb.Device) {
 
 func (o *opsWork) localToadbOps(device *adb.Device) {
 	if o.ops == opMove || o.ops == opDelete {
-		o.opLog(notImplError, nil)
+		o.opErr(notImplError)
 		return
 	}
 
 	local, err := os.Open(o.src)
 	if err != nil {
-		o.opLog(openError, err)
+		o.opErr(openError)
 		return
 	}
 	defer local.Close()
 
 	localInfo, err := os.Stat(o.src)
 	if err != nil {
-		o.opLog(statError, err)
+		o.opErr(statError)
 		return
 	}
 	perms := localInfo.Mode().Perm()
@@ -101,7 +100,7 @@ func (o *opsWork) localToadbOps(device *adb.Device) {
 	_, fname := filepath.Split(o.src)
 	remote, err := device.OpenWrite(o.dst+fname, perms, mtime)
 	if err != nil {
-		o.opLog(createError, err)
+		o.opErr(createError)
 		return
 	}
 	defer remote.Close()
@@ -153,7 +152,7 @@ func (o *opsWork) adbToadbOps(device *adb.Device) {
 func (o *opsWork) adbOps() {
 	client, device := getAdb()
 	if client == nil || device == nil {
-		o.opLog(adbError, nil)
+		o.opErr(adbError)
 		return
 	}
 
@@ -175,10 +174,10 @@ func (p *dirPane) adbListDir(testPath string) {
 
 	_, err := device.Stat(testPath)
 	if adb.HasErrCode(err, adb.ErrCode(adb.FileNoExistError)) {
-		showError(err, testPath)
+		showError(statError, testPath)
 		return
 	} else if err != nil {
-		showError(err, testPath)
+		showError(unknownError, testPath)
 		return
 	}
 
@@ -188,7 +187,7 @@ func (p *dirPane) adbListDir(testPath string) {
 
 	dent, err := device.ListDirEntries(testPath)
 	if err != nil {
-		showError(err, testPath)
+		showError(statError, testPath)
 		return
 	}
 

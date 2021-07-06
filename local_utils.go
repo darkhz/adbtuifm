@@ -133,13 +133,13 @@ func (p *dirPane) ChangeDir(cdFwd bool, cdBack bool) {
 
 func (o *opsWork) localOps() {
 	if o.ops == opMove || o.ops == opDelete {
-		o.opLog(notImplError, nil)
+		o.opErr(notImplError)
 		return
 	}
 
 	srcFile, err := os.Open(o.src)
 	if err != nil {
-		o.opLog(openError, err)
+		o.opErr(openError)
 		return
 	}
 	defer srcFile.Close()
@@ -148,7 +148,7 @@ func (o *opsWork) localOps() {
 
 	dstFile, err := os.Create(o.dst + fname)
 	if err != nil {
-		o.opLog(createError, err)
+		o.opErr(createError)
 		return
 	}
 	defer dstFile.Close()

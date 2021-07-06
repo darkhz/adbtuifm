@@ -8,13 +8,20 @@ import (
 	"github.com/rivo/tview"
 )
 
-func showError(err error, msg string) {
-	if err != nil {
-		if msg != "" {
-			msg = err.Error() + " -- " + msg
-		} else {
-			msg = err.Error()
-		}
+func showError(sterr statusError, msg string) {
+	switch sterr {
+	case openError:
+		msg = "Failed to open " + msg
+	case statError:
+		msg = "Failed to stat " + msg
+	case createError:
+		msg = "Failed to create " + msg
+	case adbError:
+		msg = "Failed to connect to ADB"
+	case notImplError:
+		msg = msg + " is not implemented"
+	case unknownError:
+		msg = "An unknown error occurred " + msg
 	}
 
 	showErrorModal(msg)
@@ -32,19 +39,21 @@ func (o *opsWork) updateOpsView(col int, msg string) {
 		SetSelectable(false))
 }
 
+func (o *opsWork) opErr(sterr statusError) {
+	app.QueueUpdateDraw(func() {
+		if sterr == createError {
+			showError(sterr, o.dst)
+		} else if sterr == notImplError {
+			showError(sterr, o.ops.String())
+		} else {
+			showError(sterr, o.src)
+		}
+	})
+}
+
 func (o *opsWork) opLog(status opStatus, err error) {
 	app.QueueUpdateDraw(func() {
 		switch status {
-		case openError:
-			showError(err, "Failed to open")
-		case statError:
-			showError(err, "Failed to stat")
-		case createError:
-			showError(err, "Failed to create")
-		case adbError:
-			showError(err, "Failed to connect to ADB")
-		case notImplError:
-			showError(nil, o.ops.String()+" is not implemented")
 		case opInProgress:
 			o.updateOpsView(0, strconv.Itoa(o.id))
 			o.updateOpsView(1, o.ops.String())
@@ -63,7 +72,7 @@ func (o *opsWork) opLog(status opStatus, err error) {
 				o.updateOpsView(3, "[red]CANCELED")
 				return
 			} else if err != nil {
-				showError(err, "Jobs failed")
+				showError(unknownError, "Jobs failed")
 				o.updateOpsView(3, "[red]ERROR")
 				return
 			}

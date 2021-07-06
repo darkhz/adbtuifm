@@ -35,15 +35,19 @@ const (
 type opStatus int
 
 const (
-	openError opStatus = iota
+	opInProgress opStatus = iota
+	opDone
+)
+
+type statusError int
+
+const (
+	openError statusError = iota
 	statError
 	createError
 	unknownError
 	notImplError
 	adbError
-
-	opInProgress
-	opDone
 )
 
 type dirPane struct {
