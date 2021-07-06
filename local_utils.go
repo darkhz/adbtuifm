@@ -132,8 +132,22 @@ func (p *dirPane) ChangeDir(cdFwd bool, cdBack bool) {
 }
 
 func (o *opsWork) localOps() {
-	if o.ops == opMove || o.ops == opDelete {
-		o.opErr(notImplError)
+	_, fname := filepath.Split(o.src)
+
+	switch o.ops {
+	case opMove:
+		err := os.Rename(o.src, o.dst+fname)
+		if err != nil {
+			showError(unknownError, "while moving")
+			return
+		}
+		return
+	case opDelete:
+		err := os.Remove(o.src)
+		if err != nil {
+			showError(unknownError, "while deleting")
+			return
+		}
 		return
 	}
 
@@ -143,8 +157,6 @@ func (o *opsWork) localOps() {
 		return
 	}
 	defer srcFile.Close()
-
-	_, fname := filepath.Split(o.src)
 
 	dstFile, err := os.Create(o.dst + fname)
 	if err != nil {
