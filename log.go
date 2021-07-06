@@ -49,7 +49,7 @@ func (o *opsWork) opErr(sterr statusError) {
 		} else if sterr == notImplError {
 			showError(sterr, o.ops.String())
 		} else {
-			showError(sterr, o.src)
+			showError(sterr, " -- "+o.ops.String()+" on "+o.src)
 		}
 	})
 }
@@ -75,7 +75,6 @@ func (o *opsWork) opLog(status opStatus, err error) {
 				o.updateOpsView(3, "[red]CANCELED")
 				return
 			} else if err != nil {
-				showError(unknownError, "Jobs failed")
 				o.updateOpsView(3, "[red]ERROR")
 				return
 			}

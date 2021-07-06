@@ -134,20 +134,24 @@ func (p *dirPane) ChangeDir(cdFwd bool, cdBack bool) {
 func (o *opsWork) localOps() {
 	_, fname := filepath.Split(o.src)
 
+	o.opLog(opInProgress, nil)
+
 	switch o.ops {
 	case opMove:
 		err := os.Rename(o.src, o.dst+fname)
 		if err != nil {
-			showError(unknownError, "while moving")
-			return
+			o.opErr(unknownError)
 		}
+
+		o.opLog(opDone, err)
 		return
 	case opDelete:
 		err := os.Remove(o.src)
 		if err != nil {
-			showError(unknownError, "while deleting")
-			return
+			o.opErr(unknownError)
 		}
+
+		o.opLog(opDone, err)
 		return
 	}
 
@@ -164,8 +168,6 @@ func (o *opsWork) localOps() {
 		return
 	}
 	defer dstFile.Close()
-
-	o.opLog(opInProgress, nil)
 
 	cioIn := contextio.NewReader(o.ctx, srcFile)
 	_, err = io.Copy(dstFile, cioIn)
