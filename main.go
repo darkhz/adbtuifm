@@ -55,7 +55,7 @@ func main() {
 	}
 
 	initAPath = *cmdAPath
-	initLPath = *cmdLPath
+	initLPath, _ = filepath.Abs(*cmdLPath)
 
 	jobNum = 0
 	opsLock = false
