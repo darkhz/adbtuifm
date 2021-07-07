@@ -209,6 +209,7 @@ func (p *dirPane) showChangeDirInput() {
 	input.SetTitle("Change Directory to:")
 	input.SetTitleAlign(tview.AlignCenter)
 	input.SetBorder(true)
+	input.SetText(p.path)
 
 	input.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
@@ -218,6 +219,14 @@ func (p *dirPane) showChangeDirInput() {
 		case tcell.KeyEnter:
 			pages.SwitchToPage("main")
 			app.SetFocus(prevPane.tbl)
+
+			switch p.mode {
+			case mAdb:
+				p.apath = p.path
+			case mLocal:
+				p.dpath = p.path
+			}
+
 			p.path = trimPath(input.GetText(), false)
 			p.ChangeDir(false, false)
 		}

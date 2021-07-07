@@ -167,29 +167,30 @@ func (o *opsWork) adbOps() {
 	}
 }
 
-func (p *dirPane) adbListDir(testPath string) {
+func (p *dirPane) adbListDir(testPath string) bool {
 	client, device := getAdb()
 	if client == nil || device == nil {
-		return
+		return false
 	}
 
 	_, err := device.Stat(testPath)
 	if adb.HasErrCode(err, adb.ErrCode(adb.FileNoExistError)) {
 		showError(statError, testPath)
-		return
+		return false
 	} else if err != nil {
 		showError(unknownError, testPath)
-		return
+		return false
 	}
 
 	if p.pathList != nil && !p.isDir(testPath) {
-		return
+		showError(unknownError, testPath)
+		return false
 	}
 
 	dent, err := device.ListDirEntries(testPath)
 	if err != nil {
 		showError(statError, testPath)
-		return
+		return false
 	}
 
 	for dent.Next() {
@@ -211,8 +212,10 @@ func (p *dirPane) adbListDir(testPath string) {
 		p.pathList = append(p.pathList, ent)
 	}
 	if dent.Err() != nil {
-		return
+		return false
 	}
+
+	return true
 }
 
 func isSymDir(testPath, name string) bool {

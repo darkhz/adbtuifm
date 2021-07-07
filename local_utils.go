@@ -29,15 +29,15 @@ func (p *dirPane) isDir(testPath string) bool {
 	return true
 }
 
-func (p *dirPane) localListDir(testPath string) {
+func (p *dirPane) localListDir(testPath string) bool {
 	fi, err := os.Lstat(testPath)
 	if err != nil {
-		return
+		return false
 	}
 
 	file, err := os.Open(testPath)
 	if err != nil {
-		return
+		return false
 	}
 	defer file.Close()
 
@@ -52,7 +52,7 @@ func (p *dirPane) localListDir(testPath string) {
 
 		fi, err = os.Stat(testPath + name)
 		if err != nil {
-			return
+			return false
 		}
 
 		mode := fi.Mode()
@@ -67,6 +67,8 @@ func (p *dirPane) localListDir(testPath string) {
 
 		p.pathList = append(p.pathList, &d)
 	}
+
+	return true
 }
 
 func trimPath(testPath string, cdBack bool) string {
@@ -83,21 +85,10 @@ func trimPath(testPath string, cdBack bool) string {
 	return testPath
 }
 
-func checkPath(testPath string) bool {
-	fi, err := os.Stat(testPath)
-	if err != nil {
-		return false
-	}
-	if !fi.Mode().IsDir() {
-		return false
-	}
-
-	return true
-}
-
 func (p *dirPane) ChangeDir(cdFwd bool, cdBack bool) {
 	row := p.row
 	testPath := p.path
+	origPath := p.path
 
 	if cdFwd && p.pathList != nil && !p.isDir(testPath) {
 		return
@@ -113,17 +104,26 @@ func (p *dirPane) ChangeDir(cdFwd bool, cdBack bool) {
 
 	switch p.mode {
 	case mAdb:
-		p.adbListDir(testPath)
+		origPath = p.apath
+		cdFwd = p.adbListDir(testPath)
 	case mLocal:
-		p.localListDir(filepath.FromSlash(testPath))
+		origPath = p.dpath
+		cdFwd = p.localListDir(filepath.FromSlash(testPath))
 	}
 
 	list := p.pathList
 
-	p.path = filepath.ToSlash(trimPath(testPath, false))
-
-	if list == nil {
+	if list == nil && !cdFwd {
+		p.path = filepath.ToSlash(trimPath(origPath, false))
 		return
+	}
+
+	p.path = filepath.ToSlash(trimPath(testPath, false))
+	switch p.mode {
+	case mAdb:
+		p.apath = p.path
+	case mLocal:
+		p.dpath = p.path
 	}
 
 	sort.Slice(list, func(i, j int) bool {
