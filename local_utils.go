@@ -32,11 +32,13 @@ func (p *dirPane) isDir(testPath string) bool {
 func (p *dirPane) localListDir(testPath string) bool {
 	fi, err := os.Lstat(testPath)
 	if err != nil {
+		showError(statError, testPath)
 		return false
 	}
 
 	file, err := os.Open(testPath)
 	if err != nil {
+		showError(openError, testPath)
 		return false
 	}
 	defer file.Close()
@@ -52,6 +54,7 @@ func (p *dirPane) localListDir(testPath string) bool {
 
 		fi, err = os.Stat(testPath + name)
 		if err != nil {
+			showError(statError, testPath+name)
 			return false
 		}
 
