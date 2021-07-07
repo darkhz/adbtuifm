@@ -40,6 +40,7 @@ func main() {
 
 		initMode = mAdb
 		initPath = *cmdAPath
+		initAPath = initPath
 	} else if strings.EqualFold(*cmdMode, "Local") {
 		_, err := os.Stat(*cmdLPath)
 		if err != nil {
@@ -49,13 +50,11 @@ func main() {
 
 		initMode = mLocal
 		initPath, _ = filepath.Abs(*cmdLPath)
+		initLPath = initPath
 	} else {
 		fmt.Println("adbtuifm: Invalid Mode!")
 		return
 	}
-
-	initAPath = *cmdAPath
-	initLPath = *cmdLPath
 
 	jobNum = 0
 	opsLock = false
