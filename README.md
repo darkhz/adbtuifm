@@ -43,6 +43,7 @@ Flags:
 |Switch to operations page              |<kbd>o</kbd>                 |
 |Select directory/file                  |<kbd>Enter</kbd>             |
 |Change one directory back              |<kbd>Backspace</kbd>         |
+|Change to any directory                |<kbd>G</kbd>                 |
 |Refresh                                |<kbd>r</kbd>                 |
 |Copy                                   |<kbd>c</kbd>                 |
 |Move                                   |<kbd>m</kbd>                 |
@@ -50,7 +51,7 @@ Flags:
 |Delete                                 |<kbd>d</kbd>                 |
 |Cancel Copy/Move                       |<kbd>Esc</kbd>               |
 |Toggle hidden files                    |<kbd>h</kbd>                 |
-|Quit|<kbd>q</kbd>|
+|Quit                                   |<kbd>q</kbd>                 |
 
 ## Operations Page
 |Operation                |Key                          |
