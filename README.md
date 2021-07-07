@@ -43,7 +43,7 @@ Flags:
 |Switch to operations page              |<kbd>o</kbd>                 |
 |Select directory/file                  |<kbd>Enter</kbd>             |
 |Change one directory back              |<kbd>Backspace</kbd>         |
-|Change to any directory                |<kbd>G</kbd>                 |
+|Change to any directory                |<kbd>g</kbd>                 |
 |Refresh                                |<kbd>r</kbd>                 |
 |Copy                                   |<kbd>c</kbd>                 |
 |Move                                   |<kbd>m</kbd>                 |
