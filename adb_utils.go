@@ -44,12 +44,27 @@ func (o *opsWork) adbTolocalOps(device *adb.Device) {
 		return
 	}
 
-	_, err := device.Stat(o.src)
+	fname := filepath.Base(o.src)
+
+	o.opLog(opInProgress, nil)
+
+	stat, err := device.Stat(o.src)
 	if adb.HasErrCode(err, adb.ErrCode(adb.FileNoExistError)) {
 		o.opErr(openError)
 		return
 	} else if err != nil {
 		o.opErr(statError)
+		return
+	}
+
+	if stat.Mode.IsDir() {
+		d := filepath.Join(o.dst, fname)
+		if err := os.MkdirAll(d, stat.Mode); err != nil {
+			return
+		}
+
+		err = o.pullRecursive(o.src, d, device)
+		o.opLog(opDone, err)
 		return
 	}
 
@@ -60,15 +75,12 @@ func (o *opsWork) adbTolocalOps(device *adb.Device) {
 	}
 	defer remote.Close()
 
-	_, fname := filepath.Split(o.src)
-	local, err := os.Create(o.dst + fname)
+	local, err := os.Create(filepath.Join(o.dst, fname))
 	if err != nil {
 		o.opErr(createError)
 		return
 	}
 	defer local.Close()
-
-	o.opLog(opInProgress, nil)
 
 	cioOut := contextio.NewWriter(o.ctx, local)
 	_, err = io.Copy(cioOut, remote)
@@ -82,6 +94,28 @@ func (o *opsWork) localToadbOps(device *adb.Device) {
 		return
 	}
 
+	fname := filepath.Base(o.src)
+
+	o.opLog(opInProgress, nil)
+
+	localInfo, err := os.Stat(o.src)
+	if err != nil {
+		o.opErr(statError)
+		return
+	}
+
+	if localInfo.Mode().IsDir() {
+		d := filepath.Join(o.dst, fname)
+		_, err := device.RunCommand("mkdir " + d)
+		if err != nil {
+			return
+		}
+
+		err = o.pushRecursive(o.src, d, device)
+		o.opLog(opDone, err)
+		return
+	}
+
 	local, err := os.Open(o.src)
 	if err != nil {
 		o.opErr(openError)
@@ -89,23 +123,15 @@ func (o *opsWork) localToadbOps(device *adb.Device) {
 	}
 	defer local.Close()
 
-	localInfo, err := os.Stat(o.src)
-	if err != nil {
-		o.opErr(statError)
-		return
-	}
 	perms := localInfo.Mode().Perm()
 	mtime := localInfo.ModTime()
 
-	_, fname := filepath.Split(o.src)
-	remote, err := device.OpenWrite(o.dst+fname, perms, mtime)
+	remote, err := device.OpenWrite(filepath.Join(o.dst, fname), perms, mtime)
 	if err != nil {
 		o.opErr(createError)
 		return
 	}
 	defer remote.Close()
-
-	o.opLog(opInProgress, nil)
 
 	cioIn := contextio.NewReader(o.ctx, local)
 	_, err = io.Copy(remote, cioIn)
@@ -120,6 +146,7 @@ func (o *opsWork) adbToadbOps(device *adb.Device) {
 	dst := " " + "'" + o.dst + "'"
 
 	param := src + dst
+
 	o.opLog(opInProgress, nil)
 
 	switch o.ops {

@@ -151,13 +151,18 @@ func (p *dirPane) ChangeDir(cdFwd bool, cdBack bool) {
 }
 
 func (o *opsWork) localOps() {
-	_, fname := filepath.Split(o.src)
+	fname := path.Base(o.src)
+
+	fi, err := os.Stat(o.src)
+	if err != nil {
+		return
+	}
 
 	o.opLog(opInProgress, nil)
 
 	switch o.ops {
 	case opMove:
-		err := os.Rename(o.src, o.dst+fname)
+		err := os.Rename(o.src, filepath.Join(o.dst, fname))
 		if err != nil {
 			o.opErr(unknownError)
 		}
@@ -165,11 +170,22 @@ func (o *opsWork) localOps() {
 		o.opLog(opDone, err)
 		return
 	case opDelete:
-		err := os.Remove(o.src)
+		err := os.RemoveAll(o.src)
 		if err != nil {
 			o.opErr(unknownError)
 		}
 
+		o.opLog(opDone, err)
+		return
+	}
+
+	if fi.Mode().IsDir() {
+		d := filepath.Join(o.dst, fname)
+		if err := os.MkdirAll(d, fi.Mode()); err != nil {
+			return
+		}
+
+		err = o.copyRecursive(o.src, d)
 		o.opLog(opDone, err)
 		return
 	}
@@ -181,7 +197,7 @@ func (o *opsWork) localOps() {
 	}
 	defer srcFile.Close()
 
-	dstFile, err := os.Create(o.dst + fname)
+	dstFile, err := os.Create(filepath.Join(o.dst, fname))
 	if err != nil {
 		o.opErr(createError)
 		return
