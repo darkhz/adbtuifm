@@ -149,17 +149,22 @@ func (o *opsWork) adbToadbOps(device *adb.Device) {
 
 	o.opLog(opInProgress, nil)
 
+	stat, err := device.Stat(o.src)
+	if err != nil {
+		return
+	}
+
 	switch o.ops {
 	case opMove:
 		cmd = "mv"
 	case opCopy:
-		if o.pane.isDir(o.src) {
+		if stat.Mode.IsDir() {
 			cmd = "cp -r"
 		} else {
 			cmd = "cp"
 		}
 	case opDelete:
-		if o.pane.isDir(o.src) {
+		if stat.Mode.IsDir() {
 			cmd = "rm -rf"
 		} else {
 			cmd = "rm"
@@ -168,7 +173,7 @@ func (o *opsWork) adbToadbOps(device *adb.Device) {
 	}
 
 	cmd = cmd + param
-	_, err := device.RunCommand(cmd)
+	_, err = device.RunCommand(cmd)
 	if err != nil {
 		showError(unknownError, "during an ADB "+o.ops.String()+" operation")
 		return
