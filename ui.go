@@ -142,7 +142,7 @@ func setupPane(selPane *dirPane, auxPane *dirPane) {
 
 		switch event.Rune() {
 		case 'm', 'c', 'p', 'd':
-			auxPane.tbl.SetSelectable(true, true)
+			prevPane = selPane
 			opsHandler(selPane, auxPane, event.Rune())
 		case 's':
 			modeSwitchHandler(selPane)

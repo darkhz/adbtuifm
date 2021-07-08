@@ -43,7 +43,10 @@ func opsHandler(selPane *dirPane, auxPane *dirPane, key rune) {
 			ops = opCopy
 		}
 
+		auxPane.tbl.SetSelectable(true, true)
+		selPane.tbl.SetSelectable(false, false)
 		app.SetFocus(auxPane.tbl)
+
 		opsLock = true
 		return
 	case 'p':
@@ -57,6 +60,9 @@ func opsHandler(selPane *dirPane, auxPane *dirPane, key rune) {
 		if opsLock {
 			return
 		}
+
+		auxPane.tbl.SetSelectable(false, false)
+		selPane.tbl.SetSelectable(true, true)
 
 		copyPath = selPane.path + selPane.tbl.GetCell(row, 0).Text
 		pastePath = ""
