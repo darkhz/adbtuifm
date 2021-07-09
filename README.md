@@ -5,13 +5,14 @@
 
 adbtuifm is a TUI file manager for ADB.
 
-It supports:
-- Copy, move, and delete operations on the ADB device and the local machine
-- Transferring files/folders between the ADB device and the local machine
-
 It has been tested only on Linux. Windows/Mac is currently not supported.
 
 Note that this is an experimental release, so expect bugs.
+
+# Features
+- Copy, move, and delete operations on the ADB device and the local machine
+- Transferring files/folders between the ADB device and the local machine
+- Ability to change to any directory via an inputbox, with autocompletion support
 
 # Installation
 ```
@@ -56,6 +57,9 @@ Flags:
 |Switch to main page      |<kbd>o</kbd>/<kbd>Esc</kbd>  |
 |Cancel selected operation|<kbd>x</kbd>                 |
 |Cancel all operations    |<kbd>X</kbd>                 |
+
+# bugs
+- On trying to list very large directories, the UI gets stuck for a few milliseconds
 
 # todo
 - Remove the file after an operation has been cancelled
