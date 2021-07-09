@@ -2,6 +2,7 @@ package main
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -214,7 +215,7 @@ func (p *dirPane) showChangeDirInput() {
 	input.SetAutocompleteFunc(func(current string) (entries []string) {
 		var iserr bool
 
-		if len(current) == 0 {
+		if len(current) == 0 || !strings.HasSuffix(current, "/") {
 			return
 		}
 

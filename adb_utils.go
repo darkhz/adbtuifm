@@ -220,7 +220,7 @@ func (p *dirPane) adbListDir(testPath string, autocomplete bool) ([]string, bool
 		return nil, false
 	}
 
-	if p.pathList != nil && !p.isDir(testPath) {
+	if !autocomplete && p.pathList != nil && !p.isDir(testPath) {
 		if !autocomplete {
 			showError(unknownError, testPath)
 		}
