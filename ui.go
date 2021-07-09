@@ -236,10 +236,10 @@ func (p *dirPane) showChangeDirInput() {
 		switch event.Key() {
 		case tcell.KeyEscape:
 			pages.SwitchToPage("main")
-			app.SetFocus(prevPane.tbl)
+			app.SetFocus(p.tbl)
 		case tcell.KeyEnter:
 			pages.SwitchToPage("main")
-			app.SetFocus(prevPane.tbl)
+			app.SetFocus(p.tbl)
 
 			switch p.mode {
 			case mAdb:
