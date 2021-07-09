@@ -12,6 +12,12 @@ import (
 )
 
 func (o *opsWork) pushRecursive(src, dst string, device *adb.Device) error {
+	select {
+	case <-o.ctx.Done():
+		return o.ctx.Err()
+	default:
+	}
+
 	stat, err := os.Stat(src)
 	if err != nil {
 		o.opErr(statError)
@@ -79,6 +85,12 @@ func (o *opsWork) pushRecursive(src, dst string, device *adb.Device) error {
 }
 
 func (o *opsWork) pullRecursive(src, dst string, device *adb.Device) error {
+	select {
+	case <-o.ctx.Done():
+		return o.ctx.Err()
+	default:
+	}
+
 	stat, err := device.Stat(src)
 	if err != nil {
 		o.opErr(statError)
@@ -135,6 +147,12 @@ func (o *opsWork) pullRecursive(src, dst string, device *adb.Device) error {
 }
 
 func (o *opsWork) copyRecursive(src, dst string) error {
+	select {
+	case <-o.ctx.Done():
+		return o.ctx.Err()
+	default:
+	}
+
 	stat, err := os.Stat(src)
 	if err != nil {
 		o.opErr(statError)
