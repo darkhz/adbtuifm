@@ -199,30 +199,40 @@ func (o *opsWork) adbOps() {
 	}
 }
 
-func (p *dirPane) adbListDir(testPath string) bool {
+func (p *dirPane) adbListDir(testPath string, autocomplete bool) ([]string, bool) {
+	var dlist []string
+
 	client, device := getAdb()
 	if client == nil || device == nil {
-		return false
+		return nil, false
 	}
 
 	_, err := device.Stat(testPath)
 	if adb.HasErrCode(err, adb.ErrCode(adb.FileNoExistError)) {
-		showError(statError, testPath)
-		return false
+		if !autocomplete {
+			showError(statError, testPath)
+		}
+		return nil, false
 	} else if err != nil {
-		showError(unknownError, testPath)
-		return false
+		if !autocomplete {
+			showError(unknownError, testPath)
+		}
+		return nil, false
 	}
 
 	if p.pathList != nil && !p.isDir(testPath) {
-		showError(unknownError, testPath)
-		return false
+		if !autocomplete {
+			showError(unknownError, testPath)
+		}
+		return nil, false
 	}
 
 	dent, err := device.ListDirEntries(testPath)
 	if err != nil {
-		showError(statError, testPath)
-		return false
+		if !autocomplete {
+			showError(statError, testPath)
+		}
+		return nil, false
 	}
 
 	for dent.Next() {
@@ -238,16 +248,27 @@ func (p *dirPane) adbListDir(testPath string) bool {
 		}
 
 		if ent.Mode&os.ModeDir != 0 {
-			ent.Name = name + "/"
+			if !autocomplete {
+				ent.Name = name + "/"
+			} else {
+				dlist = append(dlist, testPath+name)
+				continue
+			}
 		}
 
-		p.pathList = append(p.pathList, ent)
+		if ent.Mode&os.ModeDir == 0 && autocomplete {
+			continue
+		}
+
+		if !autocomplete {
+			p.pathList = append(p.pathList, ent)
+		}
 	}
 	if dent.Err() != nil {
-		return false
+		return nil, false
 	}
 
-	return true
+	return dlist, true
 }
 
 func isSymDir(testPath, name string) bool {

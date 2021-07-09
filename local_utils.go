@@ -29,17 +29,23 @@ func (p *dirPane) isDir(testPath string) bool {
 	return true
 }
 
-func (p *dirPane) localListDir(testPath string) bool {
+func (p *dirPane) localListDir(testPath string, autocomplete bool) ([]string, bool) {
+	var dlist []string
+
 	fi, err := os.Lstat(testPath)
 	if err != nil {
-		showError(statError, testPath)
-		return false
+		if !autocomplete {
+			showError(statError, testPath)
+		}
+		return nil, false
 	}
 
 	file, err := os.Open(testPath)
 	if err != nil {
-		showError(openError, testPath)
-		return false
+		if !autocomplete {
+			showError(openError, testPath)
+		}
+		return nil, false
 	}
 	defer file.Close()
 
@@ -54,13 +60,24 @@ func (p *dirPane) localListDir(testPath string) bool {
 
 		fi, err = os.Stat(testPath + name)
 		if err != nil {
-			showError(statError, testPath+name)
-			return false
+			if !autocomplete {
+				showError(statError, testPath+name)
+			}
+			return nil, false
 		}
 
 		mode := fi.Mode()
 		if mode.IsDir() {
-			name = name + "/"
+			if !autocomplete {
+				name = name + "/"
+			} else {
+				dlist = append(dlist, testPath+name)
+				continue
+			}
+		}
+
+		if !mode.IsDir() && autocomplete {
+			continue
 		}
 
 		d.Name = name
@@ -68,10 +85,12 @@ func (p *dirPane) localListDir(testPath string) bool {
 		d.Size = int32(fi.Size())
 		d.ModifiedAt = fi.ModTime()
 
-		p.pathList = append(p.pathList, &d)
+		if !autocomplete {
+			p.pathList = append(p.pathList, &d)
+		}
 	}
 
-	return true
+	return dlist, true
 }
 
 func trimPath(testPath string, cdBack bool) string {
@@ -108,10 +127,10 @@ func (p *dirPane) ChangeDir(cdFwd bool, cdBack bool) {
 	switch p.mode {
 	case mAdb:
 		origPath = p.apath
-		cdFwd = p.adbListDir(testPath)
+		_, cdFwd = p.adbListDir(testPath, false)
 	case mLocal:
 		origPath = p.dpath
-		cdFwd = p.localListDir(filepath.FromSlash(testPath))
+		_, cdFwd = p.localListDir(filepath.FromSlash(testPath), false)
 	}
 
 	list := p.pathList

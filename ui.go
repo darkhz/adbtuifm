@@ -211,6 +211,27 @@ func (p *dirPane) showChangeDirInput() {
 	input.SetBorder(true)
 	input.SetText(p.path)
 
+	input.SetAutocompleteFunc(func(current string) (entries []string) {
+		var iserr bool
+
+		if len(current) == 0 {
+			return
+		}
+
+		switch p.mode {
+		case mAdb:
+			entries, iserr = p.adbListDir(current, true)
+		case mLocal:
+			entries, iserr = p.localListDir(current, true)
+		}
+
+		if !iserr {
+			return
+		}
+
+		return
+	})
+
 	input.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
 		case tcell.KeyEscape:
