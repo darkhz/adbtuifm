@@ -200,12 +200,10 @@ func (o *opsWork) localOps() {
 
 	if fi.Mode().IsDir() {
 		d := filepath.Join(o.dst, fname)
-		if err := os.MkdirAll(d, fi.Mode()); err != nil {
-			return
-		}
 
 		err = o.copyRecursive(o.src, d)
 		o.opLog(opDone, err)
+
 		return
 	}
 

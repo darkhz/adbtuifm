@@ -59,12 +59,10 @@ func (o *opsWork) adbTolocalOps(device *adb.Device) {
 
 	if stat.Mode.IsDir() {
 		d := filepath.Join(o.dst, fname)
-		if err := os.MkdirAll(d, stat.Mode); err != nil {
-			return
-		}
 
 		err = o.pullRecursive(o.src, d, device)
 		o.opLog(opDone, err)
+
 		return
 	}
 
@@ -106,13 +104,10 @@ func (o *opsWork) localToadbOps(device *adb.Device) {
 
 	if localInfo.Mode().IsDir() {
 		d := filepath.Join(o.dst, fname)
-		_, err := device.RunCommand("mkdir " + d)
-		if err != nil {
-			return
-		}
 
 		err = o.pushRecursive(o.src, d, device)
 		o.opLog(opDone, err)
+
 		return
 	}
 
