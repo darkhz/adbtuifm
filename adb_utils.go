@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/dolmen-go/contextio"
+	"github.com/machinebox/progress"
 	adb "github.com/zach-klippenstein/goadb"
 )
 
@@ -60,6 +61,12 @@ func (o *opsWork) adbTolocalOps(device *adb.Device) {
 	if stat.Mode.IsDir() {
 		d := filepath.Join(o.dst, fname)
 
+		err = o.getTotalFiles()
+		if err != nil {
+			o.opLog(opDone, err)
+			return
+		}
+
 		err = o.pullRecursive(o.src, d, device)
 		o.opLog(opDone, err)
 
@@ -81,7 +88,11 @@ func (o *opsWork) adbTolocalOps(device *adb.Device) {
 	defer local.Close()
 
 	cioOut := contextio.NewWriter(o.ctx, local)
-	_, err = io.Copy(cioOut, remote)
+	prgOut := progress.NewWriter(cioOut)
+
+	o.startProgress(1, int64(stat.Size), prgOut, false)
+
+	_, err = io.Copy(prgOut, remote)
 
 	o.opLog(opDone, err)
 }
@@ -104,6 +115,12 @@ func (o *opsWork) localToadbOps(device *adb.Device) {
 
 	if localInfo.Mode().IsDir() {
 		d := filepath.Join(o.dst, fname)
+
+		err = o.getTotalFiles()
+		if err != nil {
+			o.opLog(opDone, err)
+			return
+		}
 
 		err = o.pushRecursive(o.src, d, device)
 		o.opLog(opDone, err)
@@ -129,7 +146,11 @@ func (o *opsWork) localToadbOps(device *adb.Device) {
 	defer remote.Close()
 
 	cioIn := contextio.NewReader(o.ctx, local)
-	_, err = io.Copy(remote, cioIn)
+	prgIn := progress.NewReader(cioIn)
+
+	o.startProgress(1, localInfo.Size(), prgIn, false)
+
+	_, err = io.Copy(remote, prgIn)
 
 	o.opLog(opDone, err)
 }

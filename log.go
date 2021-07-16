@@ -6,9 +6,12 @@ import (
 	"path"
 	"path/filepath"
 	"strconv"
+	"sync"
 
 	"github.com/rivo/tview"
 )
+
+var updateOps sync.Mutex
 
 func showError(sterr statusError, msg string) {
 	switch sterr {
@@ -30,15 +33,20 @@ func showError(sterr statusError, msg string) {
 }
 
 func (o *opsWork) updateOpsView(col int, msg string) {
-	if col == 0 {
-		opsView.SetCell(o.id+1, col, tview.NewTableCell(msg).
-			SetAlign(tview.AlignCenter))
-		return
-	}
+	updateOps.Lock()
+	defer updateOps.Unlock()
 
-	opsView.SetCell(o.id+1, col, tview.NewTableCell(msg).
-		SetAlign(tview.AlignCenter).
-		SetSelectable(false))
+	app.QueueUpdateDraw(func() {
+		if col == 0 {
+			opsView.SetCell(o.id+1, col, tview.NewTableCell(msg).
+				SetAlign(tview.AlignCenter))
+			return
+		}
+
+		opsView.SetCell(o.id+1, col, tview.NewTableCell(msg).
+			SetAlign(tview.AlignCenter).
+			SetSelectable(false))
+	})
 }
 
 func (o *opsWork) opErr(sterr statusError) {
@@ -55,31 +63,30 @@ func (o *opsWork) opErr(sterr statusError) {
 }
 
 func (o *opsWork) opLog(status opStatus, err error) {
-	app.QueueUpdateDraw(func() {
-		switch status {
-		case opInProgress:
-			o.updateOpsView(0, strconv.Itoa(o.id))
-			o.updateOpsView(1, o.ops.String())
+	switch status {
+	case opInProgress:
+		o.updateOpsView(0, strconv.Itoa(o.id))
+		o.updateOpsView(1, o.ops.String())
 
-			if o.ops == opDelete {
-				o.updateOpsView(2, o.src)
-			} else {
-				o.updateOpsView(2, o.src+" -> "+o.dst)
-			}
-
-			o.updateOpsView(3, "IN PROGRESS")
-			opsView.ScrollToEnd()
-			jobNum++
-		case opDone:
-			if errors.Is(err, context.Canceled) {
-				o.updateOpsView(3, "[red]CANCELED")
-				return
-			} else if err != nil {
-				o.updateOpsView(3, "[red]ERROR")
-				return
-			}
-
-			o.updateOpsView(3, "[green]DONE")
+		if o.ops == opDelete {
+			o.updateOpsView(2, o.src)
+		} else {
+			o.updateOpsView(2, o.src+" -> "+o.dst)
 		}
-	})
+
+		o.updateOpsView(3, "IN PROGRESS")
+		opsView.ScrollToEnd()
+		jobNum++
+	case opDone:
+		if errors.Is(err, context.Canceled) {
+			o.updateOpsView(3, "[red]CANCELED")
+			return
+		} else if err != nil {
+			o.updateOpsView(3, "[red]ERROR")
+			return
+		}
+
+		o.updateOpsView(3, "[green]DONE")
+		o.cancel()
+	}
 }

@@ -16,15 +16,17 @@ func newOpsWork(pane *dirPane, ops opsMode, cpPath, psPath string) opsWork {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return opsWork{
-		id:       jobNum,
-		src:      cpPath,
-		dst:      psPath,
-		pane:     pane,
-		ctx:      ctx,
-		cancel:   cancel,
-		ops:      ops,
-		transfer: localToLocal,
-		finished: false,
+		id:        jobNum,
+		src:       cpPath,
+		dst:       psPath,
+		pane:      pane,
+		ctx:       ctx,
+		cancel:    cancel,
+		ops:       ops,
+		transfer:  localToLocal,
+		finished:  false,
+		currFile:  0,
+		totalFile: 0,
 	}
 }
 

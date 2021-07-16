@@ -1,13 +1,17 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 
 	"github.com/dolmen-go/contextio"
+	"github.com/machinebox/progress"
 	adb "github.com/zach-klippenstein/goadb"
 )
 
@@ -73,9 +77,14 @@ func (o *opsWork) pushRecursive(src, dst string, device *adb.Device) error {
 		}
 		defer remote.Close()
 
+		stat, _ := os.Stat(s)
 		cioIn := contextio.NewReader(o.ctx, local)
+		prgIn := progress.NewReader(cioIn)
 
-		_, err = io.Copy(remote, cioIn)
+		o.startProgress(o.currFile, stat.Size(), prgIn, true)
+
+		_, err = io.Copy(remote, prgIn)
+
 		if err != nil {
 			return err
 		}
@@ -133,8 +142,11 @@ func (o *opsWork) pullRecursive(src, dst string, device *adb.Device) error {
 		defer local.Close()
 
 		cioOut := contextio.NewWriter(o.ctx, local)
+		prgOut := progress.NewWriter(cioOut)
 
-		_, err = io.Copy(cioOut, remote)
+		o.startProgress(o.currFile, int64(entry.Size), prgOut, true)
+
+		_, err = io.Copy(prgOut, remote)
 		if err != nil {
 			return err
 		}
@@ -198,12 +210,51 @@ func (o *opsWork) copyRecursive(src, dst string) error {
 		}
 		defer srcFile.Close()
 
+		stat, _ := os.Stat(s)
 		cioIn := contextio.NewReader(o.ctx, srcFile)
-		_, err = io.Copy(dstFile, cioIn)
+		prgIn := progress.NewReader(cioIn)
+
+		o.startProgress(o.currFile, stat.Size(), prgIn, true)
+
+		_, err = io.Copy(dstFile, prgIn)
 		if err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func (o *opsWork) getTotalFiles() error {
+	if o.transfer == adbToAdb || o.transfer == adbToLocal {
+		_, device := getAdb()
+		if device == nil {
+			return errors.New("No ADB device")
+		}
+
+		cmd := "find " + o.src + " -type f | wc -l"
+		out, err := device.RunCommand(cmd)
+		if err != nil {
+			return err
+		}
+
+		o.totalFile, err = strconv.Atoi(strings.TrimSuffix(out, "\n"))
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	err := filepath.Walk(o.src, func(p string, entry os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !entry.IsDir() {
+			o.totalFile++
+		}
+		return nil
+	})
+
+	return err
 }

@@ -7,6 +7,7 @@ require (
 	github.com/alecthomas/units v0.0.0-20210208195552-ff826a37aa15 // indirect
 	github.com/dolmen-go/contextio v0.0.0-20200217195037-68fc5150bcd5
 	github.com/gdamore/tcell/v2 v2.3.11
+	github.com/machinebox/progress v0.2.0
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/rivo/tview v0.0.0-20210624165335-29d673af0ce2
 	github.com/zach-klippenstein/goadb v0.0.0-20201208042340-620e0e950ed7

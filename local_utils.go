@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/dolmen-go/contextio"
+	"github.com/machinebox/progress"
 	adb "github.com/zach-klippenstein/goadb"
 )
 
@@ -172,7 +173,7 @@ func (p *dirPane) ChangeDir(cdFwd bool, cdBack bool) {
 func (o *opsWork) localOps() {
 	fname := path.Base(o.src)
 
-	fi, err := os.Stat(o.src)
+	stat, err := os.Stat(o.src)
 	if err != nil {
 		return
 	}
@@ -198,8 +199,14 @@ func (o *opsWork) localOps() {
 		return
 	}
 
-	if fi.Mode().IsDir() {
+	if stat.Mode().IsDir() {
 		d := filepath.Join(o.dst, fname)
+
+		err = o.getTotalFiles()
+		if err != nil {
+			o.opLog(opDone, err)
+			return
+		}
 
 		err = o.copyRecursive(o.src, d)
 		o.opLog(opDone, err)
@@ -222,7 +229,11 @@ func (o *opsWork) localOps() {
 	defer dstFile.Close()
 
 	cioIn := contextio.NewReader(o.ctx, srcFile)
-	_, err = io.Copy(dstFile, cioIn)
+	prgIn := progress.NewReader(cioIn)
+
+	o.startProgress(1, stat.Size(), prgIn, false)
+
+	_, err = io.Copy(dstFile, prgIn)
 
 	o.opLog(opDone, err)
 }

@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/rivo/tview"
-	"github.com/zach-klippenstein/goadb"
+	adb "github.com/zach-klippenstein/goadb"
 )
 
 type transferMode int
@@ -61,15 +61,17 @@ type dirPane struct {
 }
 
 type opsWork struct {
-	id       int
-	src      string
-	dst      string
-	pane     *dirPane
-	ctx      context.Context
-	cancel   context.CancelFunc
-	ops      opsMode
-	transfer transferMode
-	finished bool
+	id        int
+	src       string
+	dst       string
+	pane      *dirPane
+	ctx       context.Context
+	cancel    context.CancelFunc
+	ops       opsMode
+	transfer  transferMode
+	finished  bool
+	currFile  int
+	totalFile int
 }
 
 func (op opsMode) String() string {
