@@ -83,6 +83,7 @@ func (o *opsWork) opLog(status opStatus, err error) {
 			return
 		} else if err != nil {
 			o.updateOpsView(3, "[red]ERROR")
+			o.opErr(unknownError)
 			return
 		}
 

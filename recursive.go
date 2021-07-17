@@ -15,11 +15,132 @@ import (
 	adb "github.com/zach-klippenstein/goadb"
 )
 
+func (o *opsWork) pullFile(src, dst string, entry *adb.DirEntry, device *adb.Device, recursive bool) error {
+	remote, err := device.OpenRead(src)
+	if err != nil {
+		o.opErr(createError)
+		return err
+	}
+	defer remote.Close()
+
+	local, err := os.Create(dst)
+	if err != nil {
+		o.opErr(openError)
+		return err
+	}
+	defer local.Close()
+
+	cioOut := contextio.NewWriter(o.ctx, local)
+	prgOut := progress.NewWriter(cioOut)
+
+	o.startProgress(o.currFile, int64(entry.Size), prgOut, recursive)
+
+	_, err = io.Copy(prgOut, remote)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (o *opsWork) pullRecursive(src, dst string, device *adb.Device) error {
+	select {
+	case <-o.ctx.Done():
+		return o.ctx.Err()
+	default:
+	}
+
+	if o.ops != opCopy {
+		o.opErr(notImplError)
+		return errors.New("Not implemented")
+	}
+
+	stat, err := device.Stat(src)
+	if err != nil {
+		o.opErr(statError)
+		return err
+	}
+
+	if !stat.Mode.IsDir() {
+		return o.pullFile(src, dst, stat, device, false)
+	}
+
+	if err = os.MkdirAll(dst, stat.Mode); err != nil {
+		return err
+	}
+
+	list, err := device.ListDirEntries(src)
+
+	for list.Next() {
+		entry := list.Entry()
+
+		s := filepath.Join(src, entry.Name)
+		d := filepath.Join(dst, entry.Name)
+
+		if entry.Mode&os.ModeDir != 0 {
+			if err = o.pullRecursive(s, d, device); err != nil {
+				return err
+			}
+			continue
+		}
+
+		if err = o.getTotalFiles(); err != nil {
+			return err
+		}
+
+		if err = o.pullFile(s, d, entry, device, true); err != nil {
+			return err
+		}
+	}
+	if list.Err() != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (o *opsWork) pushFile(src, dst string, entry os.FileInfo, device *adb.Device, recursive bool) error {
+	mtime := entry.ModTime()
+	perms := entry.Mode().Perm()
+
+	local, err := os.Open(src)
+	if err != nil {
+		o.opErr(openError)
+		return err
+	}
+	defer local.Close()
+
+	remote, err := device.OpenWrite(dst, perms, mtime)
+	if err != nil {
+		o.opErr(createError)
+		return err
+	}
+	defer remote.Close()
+
+	cioIn := contextio.NewReader(o.ctx, local)
+	prgIn := progress.NewReader(cioIn)
+
+	o.startProgress(o.currFile, entry.Size(), prgIn, recursive)
+
+	_, err = io.Copy(remote, prgIn)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (o *opsWork) pushRecursive(src, dst string, device *adb.Device) error {
 	select {
 	case <-o.ctx.Done():
 		return o.ctx.Err()
 	default:
+	}
+
+	if o.ops != opCopy {
+		o.opErr(notImplError)
+		return errors.New("Not implemented")
 	}
 
 	stat, err := os.Stat(src)
@@ -28,12 +149,16 @@ func (o *opsWork) pushRecursive(src, dst string, device *adb.Device) error {
 		return err
 	}
 
-	fil, err := os.Open(src)
+	if !stat.Mode().IsDir() {
+		return o.pushFile(src, dst, stat, device, false)
+	}
+
+	srcfd, err := os.Open(src)
 	if err != nil {
 		o.opErr(openError)
 		return err
 	}
-	defer fil.Close()
+	defer srcfd.Close()
 
 	_, err = device.RunCommand("mkdir " + dst)
 	if err != nil {
@@ -56,36 +181,17 @@ func (o *opsWork) pushRecursive(src, dst string, device *adb.Device) error {
 		d := filepath.Join(dst, entry.Name())
 
 		if entry.IsDir() {
-			o.pushRecursive(s, d, device)
+			if err = o.pushRecursive(s, d, device); err != nil {
+				return err
+			}
 			continue
 		}
 
-		perms := entry.Mode().Perm()
-		mtime := entry.ModTime()
-
-		local, err := os.Open(s)
-		if err != nil {
-			o.opErr(openError)
+		if err = o.getTotalFiles(); err != nil {
 			return err
 		}
-		defer local.Close()
 
-		remote, err := device.OpenWrite(d, perms, mtime)
-		if err != nil {
-			o.opErr(createError)
-			return err
-		}
-		defer remote.Close()
-
-		stat, _ := os.Stat(s)
-		cioIn := contextio.NewReader(o.ctx, local)
-		prgIn := progress.NewReader(cioIn)
-
-		o.startProgress(o.currFile, stat.Size(), prgIn, true)
-
-		_, err = io.Copy(remote, prgIn)
-
-		if err != nil {
+		if err = o.pushFile(s, d, entry, device, true); err != nil {
 			return err
 		}
 	}
@@ -93,65 +199,26 @@ func (o *opsWork) pushRecursive(src, dst string, device *adb.Device) error {
 	return nil
 }
 
-func (o *opsWork) pullRecursive(src, dst string, device *adb.Device) error {
-	select {
-	case <-o.ctx.Done():
-		return o.ctx.Err()
-	default:
-	}
-
-	stat, err := device.Stat(src)
+func (o *opsWork) copyFile(src, dst string, entry os.FileInfo, recursive bool) error {
+	dstFile, err := os.Create(dst)
 	if err != nil {
-		o.opErr(statError)
 		return err
 	}
+	defer dstFile.Close()
 
-	if err = os.MkdirAll(dst, stat.Mode); err != nil {
+	srcFile, err := os.Open(src)
+	if err != nil {
 		return err
 	}
+	defer srcFile.Close()
 
-	list, err := device.ListDirEntries(src)
+	cioIn := contextio.NewReader(o.ctx, srcFile)
+	prgIn := progress.NewReader(cioIn)
 
-	for list.Next() {
-		entry := list.Entry()
-		name := entry.Name
+	o.startProgress(o.currFile, entry.Size(), prgIn, recursive)
 
-		s := filepath.Join(src, name)
-		d := filepath.Join(dst, name)
-
-		if entry.Mode&os.ModeDir != 0 {
-			err = o.pullRecursive(s, d, device)
-			if err != nil {
-				return err
-			}
-			continue
-		}
-
-		remote, err := device.OpenRead(s)
-		if err != nil {
-			o.opErr(createError)
-			return err
-		}
-		defer remote.Close()
-
-		local, err := os.Create(d)
-		if err != nil {
-			o.opErr(openError)
-			return err
-		}
-		defer local.Close()
-
-		cioOut := contextio.NewWriter(o.ctx, local)
-		prgOut := progress.NewWriter(cioOut)
-
-		o.startProgress(o.currFile, int64(entry.Size), prgOut, true)
-
-		_, err = io.Copy(prgOut, remote)
-		if err != nil {
-			return err
-		}
-	}
-	if list.Err() != nil {
+	_, err = io.Copy(dstFile, prgIn)
+	if err != nil {
 		return err
 	}
 
@@ -165,24 +232,30 @@ func (o *opsWork) copyRecursive(src, dst string) error {
 	default:
 	}
 
+	var list []os.FileInfo
+
 	stat, err := os.Stat(src)
 	if err != nil {
 		o.opErr(statError)
 		return err
 	}
 
-	fil, err := os.Open(src)
+	if !stat.Mode().IsDir() {
+		return o.copyFile(src, dst, stat, false)
+	}
+
+	srcfd, err := os.Open(src)
 	if err != nil {
 		o.opErr(openError)
 		return err
 	}
-	defer fil.Close()
+	defer srcfd.Close()
 
 	if err := os.MkdirAll(dst, stat.Mode()); err != nil {
 		return err
 	}
 
-	list, err := ioutil.ReadDir(src)
+	list, err = ioutil.ReadDir(src)
 	if err != nil {
 		return err
 	}
@@ -192,32 +265,17 @@ func (o *opsWork) copyRecursive(src, dst string) error {
 		d := filepath.Join(dst, entry.Name())
 
 		if entry.IsDir() {
-			o.copyRecursive(s, d)
+			if err = o.copyRecursive(s, d); err != nil {
+				return err
+			}
 			continue
 		}
 
-		dstFile, err := os.Create(d)
-		if err != nil {
-			o.opErr(createError)
+		if err = o.getTotalFiles(); err != nil {
 			return err
 		}
-		defer dstFile.Close()
 
-		srcFile, err := os.Open(s)
-		if err != nil {
-			o.opErr(openError)
-			return err
-		}
-		defer srcFile.Close()
-
-		stat, _ := os.Stat(s)
-		cioIn := contextio.NewReader(o.ctx, srcFile)
-		prgIn := progress.NewReader(cioIn)
-
-		o.startProgress(o.currFile, stat.Size(), prgIn, true)
-
-		_, err = io.Copy(dstFile, prgIn)
-		if err != nil {
+		if err = o.copyFile(s, d, entry, true); err != nil {
 			return err
 		}
 	}
@@ -226,6 +284,10 @@ func (o *opsWork) copyRecursive(src, dst string) error {
 }
 
 func (o *opsWork) getTotalFiles() error {
+	if o.totalFile > 0 {
+		return nil
+	}
+
 	if o.transfer == adbToAdb || o.transfer == adbToLocal {
 		_, device := getAdb()
 		if device == nil {

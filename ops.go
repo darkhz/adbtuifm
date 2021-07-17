@@ -12,13 +12,13 @@ var (
 	opPathLock sync.Mutex
 )
 
-func newOpsWork(pane *dirPane, ops opsMode, cpPath, psPath string) opsWork {
+func newOpsWork(pane *dirPane, ops opsMode, copyPath, pastePath string) opsWork {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return opsWork{
 		id:        jobNum,
-		src:       cpPath,
-		dst:       psPath,
+		src:       copyPath,
+		dst:       pastePath,
 		pane:      pane,
 		ctx:       ctx,
 		cancel:    cancel,

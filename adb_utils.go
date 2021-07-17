@@ -1,15 +1,20 @@
 package main
 
 import (
-	"io"
 	"os"
-	"path/filepath"
 	"strings"
 
-	"github.com/dolmen-go/contextio"
-	"github.com/machinebox/progress"
 	adb "github.com/zach-klippenstein/goadb"
 )
+
+func checkAdb() bool {
+	client, device := getAdb()
+	if client == nil || device == nil {
+		return false
+	}
+
+	return true
+}
 
 func getAdb() (*adb.Adb, *adb.Device) {
 	client, err := adb.NewWithConfig(adb.ServerConfig{})
@@ -30,132 +35,49 @@ func getAdb() (*adb.Adb, *adb.Device) {
 	return client, device
 }
 
-func checkAdb() bool {
+func isSymDir(testPath, name string) bool {
 	client, device := getAdb()
 	if client == nil || device == nil {
+		return false
+	}
+
+	cmd := "ls -pd $(readlink -f " + testPath + name + ")"
+	out, err := device.RunCommand(cmd)
+	if err != nil {
+		return false
+	}
+
+	if !strings.HasSuffix(strings.TrimSpace(out), "/") {
 		return false
 	}
 
 	return true
 }
 
-func (o *opsWork) adbTolocalOps(device *adb.Device) {
-	if o.ops == opMove || o.ops == opDelete {
-		o.opErr(notImplError)
+func (o *opsWork) adbOps() {
+	var err error
+
+	client, device := getAdb()
+	if client == nil || device == nil {
+		o.opErr(adbError)
 		return
 	}
-
-	fname := filepath.Base(o.src)
 
 	o.opLog(opInProgress, nil)
 
-	stat, err := device.Stat(o.src)
-	if adb.HasErrCode(err, adb.ErrCode(adb.FileNoExistError)) {
-		o.opErr(openError)
-		return
-	} else if err != nil {
-		o.opErr(statError)
-		return
+	switch o.transfer {
+	case adbToAdb:
+		err = o.execAdbOps(device)
+	case localToAdb:
+		err = o.pushRecursive(o.src, o.dst, device)
+	case adbToLocal:
+		err = o.pullRecursive(o.src, o.dst, device)
 	}
-
-	if stat.Mode.IsDir() {
-		d := filepath.Join(o.dst, fname)
-
-		err = o.getTotalFiles()
-		if err != nil {
-			o.opLog(opDone, err)
-			return
-		}
-
-		err = o.pullRecursive(o.src, d, device)
-		o.opLog(opDone, err)
-
-		return
-	}
-
-	remote, err := device.OpenRead(o.src)
-	if err != nil {
-		o.opErr(openError)
-		return
-	}
-	defer remote.Close()
-
-	local, err := os.Create(filepath.Join(o.dst, fname))
-	if err != nil {
-		o.opErr(createError)
-		return
-	}
-	defer local.Close()
-
-	cioOut := contextio.NewWriter(o.ctx, local)
-	prgOut := progress.NewWriter(cioOut)
-
-	o.startProgress(1, int64(stat.Size), prgOut, false)
-
-	_, err = io.Copy(prgOut, remote)
 
 	o.opLog(opDone, err)
 }
 
-func (o *opsWork) localToadbOps(device *adb.Device) {
-	if o.ops == opMove || o.ops == opDelete {
-		o.opErr(notImplError)
-		return
-	}
-
-	fname := filepath.Base(o.src)
-
-	o.opLog(opInProgress, nil)
-
-	localInfo, err := os.Stat(o.src)
-	if err != nil {
-		o.opErr(statError)
-		return
-	}
-
-	if localInfo.Mode().IsDir() {
-		d := filepath.Join(o.dst, fname)
-
-		err = o.getTotalFiles()
-		if err != nil {
-			o.opLog(opDone, err)
-			return
-		}
-
-		err = o.pushRecursive(o.src, d, device)
-		o.opLog(opDone, err)
-
-		return
-	}
-
-	local, err := os.Open(o.src)
-	if err != nil {
-		o.opErr(openError)
-		return
-	}
-	defer local.Close()
-
-	perms := localInfo.Mode().Perm()
-	mtime := localInfo.ModTime()
-
-	remote, err := device.OpenWrite(filepath.Join(o.dst, fname), perms, mtime)
-	if err != nil {
-		o.opErr(createError)
-		return
-	}
-	defer remote.Close()
-
-	cioIn := contextio.NewReader(o.ctx, local)
-	prgIn := progress.NewReader(cioIn)
-
-	o.startProgress(1, localInfo.Size(), prgIn, false)
-
-	_, err = io.Copy(remote, prgIn)
-
-	o.opLog(opDone, err)
-}
-
-func (o *opsWork) adbToadbOps(device *adb.Device) {
+func (o *opsWork) execAdbOps(device *adb.Device) error {
 	var cmd string
 
 	src := " " + "'" + o.src + "'"
@@ -163,11 +85,9 @@ func (o *opsWork) adbToadbOps(device *adb.Device) {
 
 	param := src + dst
 
-	o.opLog(opInProgress, nil)
-
 	stat, err := device.Stat(o.src)
 	if err != nil {
-		return
+		return err
 	}
 
 	switch o.ops {
@@ -192,27 +112,10 @@ func (o *opsWork) adbToadbOps(device *adb.Device) {
 	_, err = device.RunCommand(cmd)
 	if err != nil {
 		showError(unknownError, "during an ADB "+o.ops.String()+" operation")
-		return
+		return err
 	}
 
-	o.opLog(opDone, err)
-}
-
-func (o *opsWork) adbOps() {
-	client, device := getAdb()
-	if client == nil || device == nil {
-		o.opErr(adbError)
-		return
-	}
-
-	switch o.transfer {
-	case adbToAdb:
-		o.adbToadbOps(device)
-	case localToAdb:
-		o.localToadbOps(device)
-	case adbToLocal:
-		o.adbTolocalOps(device)
-	}
+	return nil
 }
 
 func (p *dirPane) adbListDir(testPath string, autocomplete bool) ([]string, bool) {
@@ -285,23 +188,4 @@ func (p *dirPane) adbListDir(testPath string, autocomplete bool) ([]string, bool
 	}
 
 	return dlist, true
-}
-
-func isSymDir(testPath, name string) bool {
-	client, device := getAdb()
-	if client == nil || device == nil {
-		return false
-	}
-
-	cmd := "ls -pd $(readlink -f " + testPath + name + ")"
-	out, err := device.RunCommand(cmd)
-	if err != nil {
-		return false
-	}
-
-	if !strings.HasSuffix(strings.TrimSpace(out), "/") {
-		return false
-	}
-
-	return true
 }

@@ -1,5 +1,10 @@
 package main
 
+import (
+	"path"
+	"path/filepath"
+)
+
 var (
 	ops       opsMode
 	opPaths   []string
@@ -54,7 +59,7 @@ func opsHandler(selPane *dirPane, auxPane *dirPane, key rune) {
 			return
 		}
 
-		pastePath = selPane.path
+		pastePath = filepath.Join(selPane.path, path.Base(copyPath))
 		opsLock = false
 	case 'd':
 		if opsLock {

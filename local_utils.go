@@ -1,19 +1,47 @@
 package main
 
 import (
-	"io"
 	"os"
 	"path"
 	"path/filepath"
 	"sort"
 	"strings"
 
-	"github.com/dolmen-go/contextio"
-	"github.com/machinebox/progress"
 	adb "github.com/zach-klippenstein/goadb"
 )
 
 var setHidden bool
+
+func trimPath(testPath string, cdBack bool) string {
+	testPath = path.Clean(testPath)
+
+	if cdBack {
+		testPath = path.Dir(testPath)
+	}
+
+	if testPath != "/" {
+		testPath = testPath + "/"
+	}
+
+	return testPath
+}
+
+func (o *opsWork) localOps() {
+	var err error
+
+	o.opLog(opInProgress, nil)
+
+	switch o.ops {
+	case opMove:
+		err = os.Rename(o.src, o.dst)
+	case opDelete:
+		err = os.RemoveAll(o.src)
+	case opCopy:
+		err = o.copyRecursive(o.src, o.dst)
+	}
+
+	o.opLog(opDone, err)
+}
 
 func (p *dirPane) isDir(testPath string) bool {
 	name := p.pathList[p.row].Name
@@ -94,20 +122,6 @@ func (p *dirPane) localListDir(testPath string, autocomplete bool) ([]string, bo
 	return dlist, true
 }
 
-func trimPath(testPath string, cdBack bool) string {
-	testPath = path.Clean(testPath)
-
-	if cdBack {
-		testPath = path.Dir(testPath)
-	}
-
-	if testPath != "/" {
-		testPath = testPath + "/"
-	}
-
-	return testPath
-}
-
 func (p *dirPane) ChangeDir(cdFwd bool, cdBack bool) {
 	row := p.row
 	testPath := p.path
@@ -168,72 +182,4 @@ func (p *dirPane) ChangeDir(cdFwd bool, cdBack bool) {
 	setPaneTitle(p)
 	p.tbl.Select(0, 0)
 	p.tbl.ScrollToBeginning()
-}
-
-func (o *opsWork) localOps() {
-	fname := path.Base(o.src)
-
-	stat, err := os.Stat(o.src)
-	if err != nil {
-		return
-	}
-
-	o.opLog(opInProgress, nil)
-
-	switch o.ops {
-	case opMove:
-		err := os.Rename(o.src, filepath.Join(o.dst, fname))
-		if err != nil {
-			o.opErr(unknownError)
-		}
-
-		o.opLog(opDone, err)
-		return
-	case opDelete:
-		err := os.RemoveAll(o.src)
-		if err != nil {
-			o.opErr(unknownError)
-		}
-
-		o.opLog(opDone, err)
-		return
-	}
-
-	if stat.Mode().IsDir() {
-		d := filepath.Join(o.dst, fname)
-
-		err = o.getTotalFiles()
-		if err != nil {
-			o.opLog(opDone, err)
-			return
-		}
-
-		err = o.copyRecursive(o.src, d)
-		o.opLog(opDone, err)
-
-		return
-	}
-
-	srcFile, err := os.Open(o.src)
-	if err != nil {
-		o.opErr(openError)
-		return
-	}
-	defer srcFile.Close()
-
-	dstFile, err := os.Create(filepath.Join(o.dst, fname))
-	if err != nil {
-		o.opErr(createError)
-		return
-	}
-	defer dstFile.Close()
-
-	cioIn := contextio.NewReader(o.ctx, srcFile)
-	prgIn := progress.NewReader(cioIn)
-
-	o.startProgress(1, stat.Size(), prgIn, false)
-
-	_, err = io.Copy(dstFile, prgIn)
-
-	o.opLog(opDone, err)
 }
