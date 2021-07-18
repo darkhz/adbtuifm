@@ -31,8 +31,8 @@ func setupUI() {
 }
 
 func setupPaneView() *tview.Flex {
-	var leftpane = dirPane{tview.NewTable(), 0, initMode, initPath, initAPath, initLPath, nil}
-	var rightpane = dirPane{tview.NewTable(), 0, initMode, initPath, initAPath, initLPath, nil}
+	var leftpane = dirPane{tview.NewTable(), 0, initMode, initPath, initAPath, initLPath, true, nil}
+	var rightpane = dirPane{tview.NewTable(), 0, initMode, initPath, initAPath, initLPath, true, nil}
 
 	selPane := &leftpane
 	auxPane := &rightpane
@@ -156,13 +156,12 @@ func setupPane(selPane *dirPane, auxPane *dirPane) {
 			app.SetFocus(opsView)
 			opsView.SetSelectable(true, false)
 		case 'h':
-			if setHidden == false {
-				setHidden = true
+			if selPane.hidden == false {
+				selPane.hidden = true
 			} else {
-				setHidden = false
+				selPane.hidden = false
 			}
 			selPane.ChangeDir(false, false)
-			auxPane.ChangeDir(false, false)
 		case 'g':
 			selPane.showChangeDirInput()
 		case 'q':

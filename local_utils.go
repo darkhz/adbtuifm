@@ -10,8 +10,6 @@ import (
 	adb "github.com/zach-klippenstein/goadb"
 )
 
-var setHidden bool
-
 func trimPath(testPath string, cdBack bool) string {
 	testPath = path.Clean(testPath)
 
@@ -79,7 +77,7 @@ func (p *dirPane) localListDir(testPath string, autocomplete bool) ([]string, bo
 	for _, name := range list {
 		var d adb.DirEntry
 
-		if setHidden && strings.HasPrefix(name, ".") {
+		if p.hidden && strings.HasPrefix(name, ".") {
 			continue
 		}
 

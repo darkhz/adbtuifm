@@ -59,7 +59,6 @@ func main() {
 
 	jobNum = 0
 	opsLock = false
-	setHidden = true
 
 	setupUI()
 }

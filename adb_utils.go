@@ -151,7 +151,7 @@ func (p *dirPane) adbListDir(testPath string, autocomplete bool) ([]string, bool
 			continue
 		}
 
-		if setHidden && strings.HasPrefix(name, ".") {
+		if p.hidden && strings.HasPrefix(name, ".") {
 			continue
 		}
 
