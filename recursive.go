@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/dolmen-go/contextio"
 	"github.com/machinebox/progress"
@@ -200,6 +201,18 @@ func (o *opsWork) pushRecursive(src, dst string, device *adb.Device) error {
 }
 
 func (o *opsWork) copyFile(src, dst string, entry os.FileInfo, recursive bool) error {
+	var err error
+
+	switch {
+	case entry.Mode()&os.ModeSymlink != 0:
+		src, err = filepath.EvalSymlinks(src)
+		if err != nil {
+			return err
+		}
+	case entry.Mode()&os.ModeNamedPipe != 0:
+		return syscall.Mkfifo(dst, uint32(entry.Mode()))
+	}
+
 	dstFile, err := os.Create(dst)
 	if err != nil {
 		return err
@@ -234,7 +247,7 @@ func (o *opsWork) copyRecursive(src, dst string) error {
 
 	var list []os.FileInfo
 
-	stat, err := os.Stat(src)
+	stat, err := os.Lstat(src)
 	if err != nil {
 		o.opErr(statError)
 		return err
