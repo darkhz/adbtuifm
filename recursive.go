@@ -101,6 +101,18 @@ func (o *opsWork) pullRecursive(src, dst string, device *adb.Device) error {
 }
 
 func (o *opsWork) pushFile(src, dst string, entry os.FileInfo, device *adb.Device, recursive bool) error {
+	var err error
+
+	switch {
+	case entry.Mode()&os.ModeSymlink != 0:
+		src, err = filepath.EvalSymlinks(src)
+		if err != nil {
+			return err
+		}
+	case entry.Mode()&os.ModeNamedPipe != 0:
+		return nil
+	}
+
 	mtime := entry.ModTime()
 	perms := entry.Mode().Perm()
 
@@ -144,7 +156,7 @@ func (o *opsWork) pushRecursive(src, dst string, device *adb.Device) error {
 		return errors.New("Not implemented")
 	}
 
-	stat, err := os.Stat(src)
+	stat, err := os.Lstat(src)
 	if err != nil {
 		o.opErr(statError)
 		return err
