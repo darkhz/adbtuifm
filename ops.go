@@ -92,7 +92,7 @@ func checkOpPaths(opPath string) bool {
 
 	for _, name := range opPaths {
 		if name == opPath {
-			showError(openError, "Operating on "+opPath)
+			showError(openError, "Operating on "+opPath, false)
 			return true
 		}
 	}

@@ -63,17 +63,13 @@ func (p *dirPane) localListDir(testPath string, autocomplete bool) ([]string, bo
 
 	fi, err := os.Lstat(testPath)
 	if err != nil {
-		if !autocomplete {
-			showError(statError, testPath)
-		}
+		showError(statError, testPath, autocomplete)
 		return nil, false
 	}
 
 	file, err := os.Open(testPath)
 	if err != nil {
-		if !autocomplete {
-			showError(openError, testPath)
-		}
+		showError(openError, testPath, autocomplete)
 		return nil, false
 	}
 	defer file.Close()
@@ -87,26 +83,19 @@ func (p *dirPane) localListDir(testPath string, autocomplete bool) ([]string, bo
 			continue
 		}
 
-		fi, err = os.Stat(testPath + name)
+		fi, err = os.Lstat(testPath + name)
 		if err != nil {
-			if !autocomplete {
-				showError(statError, testPath+name)
-			}
+			showError(statError, testPath+name, autocomplete)
 			return nil, false
 		}
 
 		mode := fi.Mode()
 		if mode.IsDir() {
-			if !autocomplete {
-				name = name + "/"
-			} else {
+			if autocomplete {
 				dlist = append(dlist, testPath+name)
 				continue
 			}
-		}
-
-		if !mode.IsDir() && autocomplete {
-			continue
+			name = name + "/"
 		}
 
 		d.Name = name
@@ -114,9 +103,7 @@ func (p *dirPane) localListDir(testPath string, autocomplete bool) ([]string, bo
 		d.Size = int32(fi.Size())
 		d.ModifiedAt = fi.ModTime()
 
-		if !autocomplete {
-			p.pathList = append(p.pathList, &d)
-		}
+		p.pathList = append(p.pathList, &d)
 	}
 
 	return dlist, true

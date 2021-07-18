@@ -13,7 +13,11 @@ import (
 
 var updateOps sync.Mutex
 
-func showError(sterr statusError, msg string) {
+func showError(sterr statusError, msg string, disable bool) {
+	if disable {
+		return
+	}
+
 	switch sterr {
 	case openError:
 		msg = "Failed to open " + msg
@@ -53,11 +57,11 @@ func (o *opsWork) opErr(sterr statusError) {
 	app.QueueUpdateDraw(func() {
 		if sterr == createError {
 			_, fname := filepath.Split(path.Clean(o.src))
-			showError(sterr, o.dst+fname)
+			showError(sterr, o.dst+fname, false)
 		} else if sterr == notImplError {
-			showError(sterr, o.ops.String())
+			showError(sterr, o.ops.String(), false)
 		} else {
-			showError(sterr, " -- "+o.ops.String()+" on "+o.src)
+			showError(sterr, " -- "+o.ops.String()+" on "+o.src, false)
 		}
 	})
 }

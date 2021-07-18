@@ -27,7 +27,7 @@ func getAdb() (*adb.Adb, *adb.Device) {
 	state, err := device.State()
 	if err != nil || state != adb.StateOnline {
 		if app != nil {
-			showError(adbError, "")
+			showError(adbError, "", false)
 		}
 		return client, nil
 	}
@@ -111,7 +111,7 @@ func (o *opsWork) execAdbOps(device *adb.Device) error {
 	cmd = cmd + param
 	_, err = device.RunCommand(cmd)
 	if err != nil {
-		showError(unknownError, "during an ADB "+o.ops.String()+" operation")
+		showError(unknownError, "during an ADB "+o.ops.String()+" operation", false)
 		return err
 	}
 
@@ -121,36 +121,25 @@ func (o *opsWork) execAdbOps(device *adb.Device) error {
 func (p *dirPane) adbListDir(testPath string, autocomplete bool) ([]string, bool) {
 	var dlist []string
 
-	client, device := getAdb()
-	if client == nil || device == nil {
+	_, device := getAdb()
+	if device == nil {
 		return nil, false
 	}
 
 	_, err := device.Stat(testPath)
-	if adb.HasErrCode(err, adb.ErrCode(adb.FileNoExistError)) {
-		if !autocomplete {
-			showError(statError, testPath)
-		}
-		return nil, false
-	} else if err != nil {
-		if !autocomplete {
-			showError(unknownError, testPath)
-		}
+	if err != nil {
+		showError(statError, testPath, autocomplete)
 		return nil, false
 	}
 
 	if !autocomplete && p.pathList != nil && !p.isDir(testPath) {
-		if !autocomplete {
-			showError(unknownError, testPath)
-		}
+		showError(unknownError, testPath, autocomplete)
 		return nil, false
 	}
 
 	dent, err := device.ListDirEntries(testPath)
 	if err != nil {
-		if !autocomplete {
-			showError(statError, testPath)
-		}
+		showError(statError, testPath, autocomplete)
 		return nil, false
 	}
 
@@ -167,21 +156,14 @@ func (p *dirPane) adbListDir(testPath string, autocomplete bool) ([]string, bool
 		}
 
 		if ent.Mode&os.ModeDir != 0 {
-			if !autocomplete {
-				ent.Name = name + "/"
-			} else {
+			if autocomplete {
 				dlist = append(dlist, testPath+name)
 				continue
 			}
+			ent.Name = name + "/"
 		}
 
-		if ent.Mode&os.ModeDir == 0 && autocomplete {
-			continue
-		}
-
-		if !autocomplete {
-			p.pathList = append(p.pathList, ent)
-		}
+		p.pathList = append(p.pathList, ent)
 	}
 	if dent.Err() != nil {
 		return nil, false
