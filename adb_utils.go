@@ -152,11 +152,12 @@ func (p *dirPane) adbListDir(testPath string, autocomplete bool) ([]string, bool
 		}
 
 		if ent.Mode&os.ModeDir != 0 {
-			if autocomplete {
-				dlist = append(dlist, testPath+name)
-				continue
-			}
+			dlist = append(dlist, testPath+name)
 			ent.Name = name + "/"
+		}
+
+		if autocomplete {
+			continue
 		}
 
 		p.pathList = append(p.pathList, ent)

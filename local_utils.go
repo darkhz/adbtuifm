@@ -89,11 +89,12 @@ func (p *dirPane) localListDir(testPath string, autocomplete bool) ([]string, bo
 
 		mode := fi.Mode()
 		if mode.IsDir() {
-			if autocomplete {
-				dlist = append(dlist, testPath+name)
-				continue
-			}
+			dlist = append(dlist, testPath+name)
 			name = name + "/"
+		}
+
+		if autocomplete {
+			continue
 		}
 
 		d.Name = name
