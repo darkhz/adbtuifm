@@ -109,8 +109,8 @@ func (p *dirPane) localListDir(testPath string, autocomplete bool) ([]string, bo
 
 func (p *dirPane) ChangeDir(cdFwd bool, cdBack bool) {
 	row := p.row
-	testPath := p.path
 	origPath := p.path
+	testPath := trimPath(p.path, false)
 
 	if cdFwd && p.pathList != nil && !p.isDir(testPath) {
 		return
