@@ -19,14 +19,12 @@ import (
 func (o *opsWork) pullFile(src, dst string, entry *adb.DirEntry, device *adb.Device, recursive bool) error {
 	remote, err := device.OpenRead(src)
 	if err != nil {
-		o.opErr(createError)
 		return err
 	}
 	defer remote.Close()
 
 	local, err := os.Create(dst)
 	if err != nil {
-		o.opErr(openError)
 		return err
 	}
 	defer local.Close()
@@ -52,13 +50,13 @@ func (o *opsWork) pullRecursive(src, dst string, device *adb.Device) error {
 	}
 
 	if o.ops != opCopy {
-		o.opErr(notImplError)
-		return errors.New("Not implemented")
+		msg := o.ops.String() + " not implemented via pull"
+		err := errors.New(msg)
+		return err
 	}
 
 	stat, err := device.Stat(src)
 	if err != nil {
-		o.opErr(statError)
 		return err
 	}
 
@@ -118,14 +116,12 @@ func (o *opsWork) pushFile(src, dst string, entry os.FileInfo, device *adb.Devic
 
 	local, err := os.Open(src)
 	if err != nil {
-		o.opErr(openError)
 		return err
 	}
 	defer local.Close()
 
 	remote, err := device.OpenWrite(dst, perms, mtime)
 	if err != nil {
-		o.opErr(createError)
 		return err
 	}
 	defer remote.Close()
@@ -152,13 +148,13 @@ func (o *opsWork) pushRecursive(src, dst string, device *adb.Device) error {
 	}
 
 	if o.ops != opCopy {
-		o.opErr(notImplError)
-		return errors.New("Not implemented")
+		msg := o.ops.String() + " not implemented via push"
+		err := errors.New(msg)
+		return err
 	}
 
 	stat, err := os.Lstat(src)
 	if err != nil {
-		o.opErr(statError)
 		return err
 	}
 
@@ -168,7 +164,6 @@ func (o *opsWork) pushRecursive(src, dst string, device *adb.Device) error {
 
 	srcfd, err := os.Open(src)
 	if err != nil {
-		o.opErr(openError)
 		return err
 	}
 	defer srcfd.Close()
@@ -261,7 +256,6 @@ func (o *opsWork) copyRecursive(src, dst string) error {
 
 	stat, err := os.Lstat(src)
 	if err != nil {
-		o.opErr(statError)
 		return err
 	}
 
@@ -271,7 +265,6 @@ func (o *opsWork) copyRecursive(src, dst string) error {
 
 	srcfd, err := os.Open(src)
 	if err != nil {
-		o.opErr(openError)
 		return err
 	}
 	defer srcfd.Close()
@@ -314,9 +307,9 @@ func (o *opsWork) getTotalFiles() error {
 	}
 
 	if o.transfer == adbToAdb || o.transfer == adbToLocal {
-		_, device := getAdb()
-		if device == nil {
-			return errors.New("No ADB device")
+		device, err := getAdb()
+		if err != nil {
+			return err
 		}
 
 		cmd := "find " + o.src + " -type f | wc -l"

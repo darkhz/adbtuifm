@@ -26,13 +26,13 @@ func main() {
 	kingpin.Parse()
 
 	if strings.EqualFold(*cmdMode, "ADB") {
-		client, device := getAdb()
-		if client == nil || device == nil {
+		device, err := getAdb()
+		if err != nil {
 			fmt.Println("adbtuifm: No ADB device or device unauthorized")
 			return
 		}
 
-		_, err := device.Stat(*cmdAPath)
+		_, err = device.Stat(*cmdAPath)
 		if err != nil {
 			fmt.Printf("adbtuifm: %s: Invalid ADB Path", *cmdAPath)
 			return

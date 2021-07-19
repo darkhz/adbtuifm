@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"strings"
 
@@ -8,36 +9,37 @@ import (
 )
 
 func checkAdb() bool {
-	client, device := getAdb()
-	if client == nil || device == nil {
+	_, err := getAdb()
+	if err != nil {
+		showError(err, false)
 		return false
 	}
 
 	return true
 }
 
-func getAdb() (*adb.Adb, *adb.Device) {
+func getAdb() (*adb.Device, error) {
+	clientNotFound := errors.New("ADB client not found")
+	deviceNotFound := errors.New("ADB device not found")
+
 	client, err := adb.NewWithConfig(adb.ServerConfig{})
 	if err != nil {
-		return nil, nil
+		return nil, clientNotFound
 	}
 
 	device := client.Device(adb.AnyDevice())
 
 	state, err := device.State()
 	if err != nil || state != adb.StateOnline {
-		if app != nil {
-			showError(adbError, "", false)
-		}
-		return client, nil
+		return nil, deviceNotFound
 	}
 
-	return client, device
+	return device, nil
 }
 
 func isSymDir(testPath, name string) bool {
-	client, device := getAdb()
-	if client == nil || device == nil {
+	device, err := getAdb()
+	if err != nil {
 		return false
 	}
 
@@ -57,9 +59,9 @@ func isSymDir(testPath, name string) bool {
 func (o *opsWork) adbOps() {
 	var err error
 
-	client, device := getAdb()
-	if client == nil || device == nil {
-		o.opErr(adbError)
+	device, err := getAdb()
+	if err != nil {
+		o.opErr(err)
 		return
 	}
 
@@ -111,7 +113,6 @@ func (o *opsWork) execAdbOps(device *adb.Device) error {
 	cmd = cmd + param
 	_, err = device.RunCommand(cmd)
 	if err != nil {
-		showError(unknownError, "during an ADB "+o.ops.String()+" operation", false)
 		return err
 	}
 
@@ -121,25 +122,24 @@ func (o *opsWork) execAdbOps(device *adb.Device) error {
 func (p *dirPane) adbListDir(testPath string, autocomplete bool) ([]string, bool) {
 	var dlist []string
 
-	_, device := getAdb()
-	if device == nil {
+	device, err := getAdb()
+	if err != nil {
 		return nil, false
 	}
 
-	_, err := device.Stat(testPath)
+	_, err = device.Stat(testPath)
 	if err != nil {
-		showError(statError, testPath, autocomplete)
+		showError(err, autocomplete)
 		return nil, false
 	}
 
 	if !autocomplete && p.pathList != nil && !p.isDir(testPath) {
-		showError(unknownError, testPath, autocomplete)
 		return nil, false
 	}
 
 	dent, err := device.ListDirEntries(testPath)
 	if err != nil {
-		showError(statError, testPath, autocomplete)
+		showError(err, autocomplete)
 		return nil, false
 	}
 

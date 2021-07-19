@@ -3,8 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"path"
-	"path/filepath"
 	"strconv"
 	"sync"
 
@@ -13,27 +11,18 @@ import (
 
 var updateOps sync.Mutex
 
-func showError(sterr statusError, msg string, disable bool) {
-	if disable {
+func showError(err error, autocomplete bool) {
+	if autocomplete {
 		return
 	}
 
-	switch sterr {
-	case openError:
-		msg = "Failed to open " + msg
-	case statError:
-		msg = "Failed to stat " + msg
-	case createError:
-		msg = "Failed to create " + msg
-	case adbError:
-		msg = "Failed to connect to ADB"
-	case notImplError:
-		msg = msg + " is not implemented"
-	case unknownError:
-		msg = "An unknown error occurred " + msg
-	}
+	showErrorModal(err.Error())
+}
 
-	showErrorModal(msg)
+func (o *opsWork) opErr(err error) {
+	app.QueueUpdateDraw(func() {
+		showError(err, false)
+	})
 }
 
 func (o *opsWork) updateOpsView(col int, msg string) {
@@ -53,19 +42,6 @@ func (o *opsWork) updateOpsView(col int, msg string) {
 	})
 }
 
-func (o *opsWork) opErr(sterr statusError) {
-	app.QueueUpdateDraw(func() {
-		if sterr == createError {
-			_, fname := filepath.Split(path.Clean(o.src))
-			showError(sterr, o.dst+fname, false)
-		} else if sterr == notImplError {
-			showError(sterr, o.ops.String(), false)
-		} else {
-			showError(sterr, " -- "+o.ops.String()+" on "+o.src, false)
-		}
-	})
-}
-
 func (o *opsWork) opLog(status opStatus, err error) {
 	switch status {
 	case opInProgress:
@@ -82,12 +58,14 @@ func (o *opsWork) opLog(status opStatus, err error) {
 		opsView.ScrollToEnd()
 		jobNum++
 	case opDone:
-		if errors.Is(err, context.Canceled) {
-			o.updateOpsView(3, "[red]CANCELED")
-			return
-		} else if err != nil {
+		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				o.updateOpsView(3, "[red]CANCELED")
+				return
+			}
+
 			o.updateOpsView(3, "[red]ERROR")
-			o.opErr(unknownError)
+			o.opErr(err)
 		} else {
 			o.updateOpsView(3, "[green]DONE")
 		}

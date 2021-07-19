@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"sync"
 )
 
@@ -92,7 +93,8 @@ func checkOpPaths(opPath string) bool {
 
 	for _, name := range opPaths {
 		if name == opPath {
-			showError(openError, "Operating on "+opPath, false)
+			err := errors.New("Already operating on" + name)
+			showError(err, false)
 			return true
 		}
 	}
@@ -124,6 +126,8 @@ func clearAllOps() bool {
 }
 
 func showOpConfirm(op opsMode, copyPath, pastePath string, DoFunc func()) {
+	alert := false
+
 	msg := op.String() + " " + copyPath
 
 	if pastePath != "" {
@@ -132,5 +136,9 @@ func showOpConfirm(op opsMode, copyPath, pastePath string, DoFunc func()) {
 
 	msg = msg + "?"
 
-	showConfirmModal(msg, DoFunc)
+	if op == opDelete {
+		alert = true
+	}
+
+	showConfirmModal(msg, alert, DoFunc)
 }

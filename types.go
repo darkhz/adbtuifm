@@ -39,17 +39,6 @@ const (
 	opDone
 )
 
-type statusError int
-
-const (
-	openError statusError = iota
-	statError
-	createError
-	unknownError
-	notImplError
-	adbError
-)
-
 type dirPane struct {
 	tbl      *tview.Table
 	row      int

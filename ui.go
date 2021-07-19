@@ -175,35 +175,6 @@ func setupPane(selPane *dirPane, auxPane *dirPane) {
 	selPane.tbl.SetSelectable(true, true)
 }
 
-func showErrorModal(msg string) {
-	msgbox := tview.NewModal().
-		SetText("[red]ERROR: " + msg).
-		AddButtons([]string{"Ok"}).
-		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
-			pages.SwitchToPage("main")
-			app.SetFocus(prevPane.tbl)
-		})
-
-	pages.AddAndSwitchToPage("modal", modal(msgbox, 80, 29), true).ShowPage("main")
-	app.SetFocus(msgbox)
-}
-
-func showConfirmModal(msg string, Dofunc func()) {
-	msgbox := tview.NewModal().
-		SetText(msg).
-		AddButtons([]string{"Ok", "Cancel"}).
-		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
-			if buttonLabel == "Ok" {
-				Dofunc()
-			}
-			pages.SwitchToPage("main")
-			app.SetFocus(prevPane.tbl)
-		})
-
-	pages.AddAndSwitchToPage("modal", modal(msgbox, 80, 29), true).ShowPage("main")
-	app.SetFocus(msgbox)
-}
-
 func (p *dirPane) showChangeDirInput() {
 	input := tview.NewInputField()
 	input.SetTitle("Change Directory to:")
@@ -259,11 +230,89 @@ func (p *dirPane) showChangeDirInput() {
 	app.SetFocus(input)
 }
 
+func showErrorModal(msg string) {
+	errview := tview.NewTextView().
+		SetDynamicColors(true).
+		SetScrollable(true)
+
+	okbtn := tview.NewButton("OK")
+
+	errview.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyDown:
+			app.SetFocus(okbtn)
+		case tcell.KeyRight:
+			errview.ScrollToEnd()
+		}
+
+		return event
+	})
+
+	okbtn.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyEnter:
+			pages.SwitchToPage("main")
+			app.SetFocus(prevPane.tbl)
+		case tcell.KeyUp:
+			app.SetFocus(errview)
+		}
+
+		return event
+	})
+
+	errview.SetText("[red]An error has occurred:\n\n" + msg)
+
+	pages.AddAndSwitchToPage("modal", errmodal(errview, okbtn, 60, 12), true).ShowPage("main")
+	app.SetFocus(okbtn)
+}
+
+func showConfirmModal(msg string, alert bool, Dofunc func()) {
+	msgbox := tview.NewModal().
+		SetText(msg).
+		AddButtons([]string{"Ok", "Cancel"}).
+		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+			if buttonLabel == "Ok" {
+				Dofunc()
+			}
+			pages.SwitchToPage("main")
+			app.SetFocus(prevPane.tbl)
+		})
+
+	if alert {
+		msgbox.SetBackgroundColor(tcell.ColorRed)
+	} else {
+		msgbox.SetBackgroundColor(tcell.ColorSteelBlue)
+	}
+
+	pages.AddAndSwitchToPage("modal", modal(msgbox, 80, 29), true).ShowPage("main")
+	app.SetFocus(msgbox)
+}
+
 func modal(p tview.Primitive, width, height int) tview.Primitive {
 	return tview.NewGrid().
 		SetColumns(0, width, 0).
 		SetRows(0, height, 0).
 		AddItem(p, 1, 1, 1, 1, 0, 0, true)
+}
+
+func errmodal(p, b tview.Primitive, width, height int) tview.Primitive {
+	flex := tview.NewFlex().
+		AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
+			AddItem(nil, 0, 1, false).
+			AddItem(p, height, 1, false).
+			AddItem(b, 1, 1, false).
+			AddItem(nil, 0, 1, false), width, 1, false)
+
+	flex.SetBorder(true)
+	flex.SetTitle("| ERROR |")
+
+	return tview.NewFlex().
+		AddItem(nil, 0, 1, false).
+		AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
+			AddItem(nil, 0, 1, false).
+			AddItem(flex, height+3, 1, false).
+			AddItem(nil, 0, 1, false), width+2, 1, false).
+		AddItem(nil, 0, 1, false)
 }
 
 func setPaneTitle(pane *dirPane) {
@@ -289,7 +338,7 @@ func (p *dirPane) updateDirPane(row int, name string) {
 }
 
 func stopApp() {
-	showConfirmModal("Do you want to quit?", func() {
+	showConfirmModal("Do you want to quit?", false, func() {
 		app.Stop()
 		cancelAllOps()
 	})
