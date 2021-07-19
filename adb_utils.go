@@ -133,10 +133,6 @@ func (p *dirPane) adbListDir(testPath string, autocomplete bool) ([]string, bool
 		return nil, false
 	}
 
-	if !autocomplete && p.pathList != nil && !p.isDir(testPath) {
-		return nil, false
-	}
-
 	dent, err := device.ListDirEntries(testPath)
 	if err != nil {
 		showError(err, autocomplete)
