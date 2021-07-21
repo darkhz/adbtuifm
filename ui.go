@@ -91,7 +91,7 @@ func setupInfoView() *tview.Table {
 		return event
 	})
 
-	opsView.SetTitle("Operations")
+	opsView.SetTitle("| Operations |")
 	opsView.SetFixed(1, 1)
 	opsView.SetCell(0, 0, tview.NewTableCell("ID").
 		SetSelectable(false))
