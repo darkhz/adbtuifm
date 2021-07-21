@@ -142,6 +142,7 @@ func (p *dirPane) ChangeDir(cdFwd bool, cdBack bool) {
 	}
 
 	p.path = filepath.ToSlash(trimPath(testPath, false))
+
 	switch p.mode {
 	case mAdb:
 		p.apath = p.path
@@ -159,10 +160,8 @@ func (p *dirPane) ChangeDir(cdFwd bool, cdBack bool) {
 
 	p.tbl.Clear()
 
-	row = 0
-	for _, d := range p.pathList {
-		p.updateDirPane(row, d.Name)
-		row++
+	for row, dir := range p.pathList {
+		p.updateDirPane(row, dir.Name)
 	}
 
 	setPaneTitle(p)
