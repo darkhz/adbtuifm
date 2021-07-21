@@ -1,7 +1,7 @@
 package main
 
 import (
-	"errors"
+	"fmt"
 	"os"
 	"strings"
 
@@ -19,8 +19,8 @@ func checkAdb() bool {
 }
 
 func getAdb() (*adb.Device, error) {
-	clientNotFound := errors.New("ADB client not found")
-	deviceNotFound := errors.New("ADB device not found")
+	clientNotFound := fmt.Errorf("ADB client not found")
+	deviceNotFound := fmt.Errorf("ADB device not found")
 
 	client, err := adb.NewWithConfig(adb.ServerConfig{})
 	if err != nil {
@@ -43,7 +43,7 @@ func isSymDir(testPath, name string) bool {
 		return false
 	}
 
-	cmd := "ls -pd $(readlink -f " + testPath + name + ")"
+	cmd := fmt.Sprintf("ls -pd $(readlink -f %s%s)", testPath, name)
 	out, err := device.RunCommand(cmd)
 	if err != nil {
 		return false
@@ -82,8 +82,8 @@ func (o *opsWork) adbOps() {
 func (o *opsWork) execAdbOps(device *adb.Device) error {
 	var cmd string
 
-	src := " " + "'" + o.src + "'"
-	dst := " " + "'" + o.dst + "'"
+	src := fmt.Sprintf(" '%s'", o.src)
+	dst := fmt.Sprintf(" '%s'", o.dst)
 
 	param := src + dst
 

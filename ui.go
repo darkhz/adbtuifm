@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -260,7 +261,8 @@ func showErrorModal(msg string) {
 		return event
 	})
 
-	errview.SetText("[red]An error has occurred:\n\n" + msg)
+	msg = fmt.Sprintf("[red]An error has occurred:\n\n%s", msg)
+	errview.SetText(msg)
 
 	pages.AddAndSwitchToPage("modal", errmodal(errview, okbtn, 60, 12), true).ShowPage("main")
 	app.SetFocus(okbtn)
@@ -320,16 +322,17 @@ func setPaneTitle(pane *dirPane) {
 
 	switch pane.mode {
 	case mAdb:
-		prefix = "Adb: "
+		prefix = "Adb"
 	case mLocal:
-		prefix = "Local: "
+		prefix = "Local"
 	}
 
 	if pane.path == "./" || pane.path == "../" {
 		pane.path = "/"
 	}
 
-	pane.tbl.SetTitle("|- " + prefix + pane.path + " -|")
+	title := fmt.Sprintf("|- %s: %s -|", prefix, pane.path)
+	pane.tbl.SetTitle(title)
 }
 
 func (p *dirPane) updateDirPane(row int, name string) {

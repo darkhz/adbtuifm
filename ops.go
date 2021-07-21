@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"sync"
 )
 
@@ -95,7 +95,7 @@ func checkOpPaths(srcPath, dstPath string) bool {
 
 	for _, path := range opPaths {
 		if path == srcPath || path == dstPath {
-			err := errors.New("Already operating on " + path)
+			err := fmt.Errorf("Already operating on %s", path)
 			showError(err, false)
 			return true
 		}
@@ -134,13 +134,11 @@ func clearAllOps() bool {
 func showOpConfirm(op opsMode, srcPath, dstPath string, DoFunc func()) {
 	alert := false
 
-	msg := op.String() + " " + srcPath
-
 	if dstPath != "" {
-		msg = msg + " to " + dstPath
+		srcPath = fmt.Sprintf("%s to %s", srcPath, dstPath)
 	}
 
-	msg = msg + "?"
+	msg := fmt.Sprintf("%s %s?", op.String(), srcPath)
 
 	if op == opDelete {
 		alert = true

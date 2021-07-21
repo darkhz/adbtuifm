@@ -34,7 +34,7 @@ func main() {
 
 		_, err = device.Stat(*cmdAPath)
 		if err != nil {
-			fmt.Printf("adbtuifm: %s: Invalid ADB Path", *cmdAPath)
+			fmt.Println("adbtuifm: %s: Invalid ADB Path", *cmdAPath)
 			return
 		}
 

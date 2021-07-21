@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 	"sync"
 
@@ -45,18 +46,19 @@ func (o *opsWork) updateOpsView(col int, msg string) {
 func (o *opsWork) opLog(status opStatus, err error) {
 	switch status {
 	case opInProgress:
-		o.updateOpsView(0, strconv.Itoa(o.id))
-		o.updateOpsView(1, o.ops.String())
+		path := o.src
+		jobNum++
 
-		if o.ops == opDelete {
-			o.updateOpsView(2, o.src)
-		} else {
-			o.updateOpsView(2, o.src+" -> "+o.dst)
+		if o.ops != opDelete {
+			path = fmt.Sprintf("%s -> %s", o.src, o.dst)
 		}
 
+		o.updateOpsView(0, strconv.Itoa(o.id))
+		o.updateOpsView(1, o.ops.String())
+		o.updateOpsView(2, path)
 		o.updateOpsView(3, "IN PROGRESS")
+
 		opsView.ScrollToEnd()
-		jobNum++
 	case opDone:
 		if err != nil {
 			if errors.Is(err, context.Canceled) {

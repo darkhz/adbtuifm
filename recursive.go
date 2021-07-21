@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -50,8 +49,7 @@ func (o *opsWork) pullRecursive(src, dst string, device *adb.Device) error {
 	}
 
 	if o.ops != opCopy {
-		msg := o.ops.String() + " not implemented via pull"
-		err := errors.New(msg)
+		err := fmt.Errorf("%s not implemented via pull", o.ops.String())
 		return err
 	}
 
@@ -148,8 +146,7 @@ func (o *opsWork) pushRecursive(src, dst string, device *adb.Device) error {
 	}
 
 	if o.ops != opCopy {
-		msg := o.ops.String() + " not implemented via push"
-		err := errors.New(msg)
+		err := fmt.Errorf("%s not implemented via push", o.ops.String())
 		return err
 	}
 
@@ -168,13 +165,15 @@ func (o *opsWork) pushRecursive(src, dst string, device *adb.Device) error {
 	}
 	defer srcfd.Close()
 
-	_, err = device.RunCommand("mkdir " + dst)
+	cmd := fmt.Sprintf("mkdir %s", dst)
+	_, err = device.RunCommand(cmd)
 	if err != nil {
 		return err
 	}
 
 	mode := fmt.Sprintf("%04o", stat.Mode().Perm())
-	_, err = device.RunCommand("chmod " + mode + " " + dst)
+	cmd = fmt.Sprintf("chmod %s %s", mode, dst)
+	_, err = device.RunCommand(cmd)
 	if err != nil {
 		return err
 	}
@@ -312,7 +311,7 @@ func (o *opsWork) getTotalFiles() error {
 			return err
 		}
 
-		cmd := "find " + o.src + " -type f | wc -l"
+		cmd := fmt.Sprintf("find %s -type f | wc -l", o.src)
 		out, err := device.RunCommand(cmd)
 		if err != nil {
 			return err
