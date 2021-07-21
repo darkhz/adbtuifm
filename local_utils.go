@@ -134,9 +134,7 @@ func (p *dirPane) ChangeDir(cdFwd bool, cdBack bool) {
 		_, cdFwd = p.localListDir(filepath.FromSlash(testPath), false)
 	}
 
-	list := p.pathList
-
-	if list == nil && !cdFwd {
+	if p.pathList == nil && !cdFwd {
 		p.path = filepath.ToSlash(trimPath(origPath, false))
 		return
 	}
@@ -150,12 +148,12 @@ func (p *dirPane) ChangeDir(cdFwd bool, cdBack bool) {
 		p.dpath = p.path
 	}
 
-	sort.Slice(list, func(i, j int) bool {
-		if list[i].Mode.IsDir() != list[j].Mode.IsDir() {
-			return list[i].Mode.IsDir()
+	sort.Slice(p.pathList, func(i, j int) bool {
+		if p.pathList[i].Mode.IsDir() != p.pathList[j].Mode.IsDir() {
+			return p.pathList[i].Mode.IsDir()
 		}
 
-		return list[i].Name < list[j].Name
+		return p.pathList[i].Name < p.pathList[j].Name
 	})
 
 	p.tbl.Clear()
