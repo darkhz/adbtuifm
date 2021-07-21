@@ -8,8 +8,8 @@ import (
 var (
 	ops       opsMode
 	opPaths   []string
-	copyPath  string
-	pastePath string
+	srcPath  string
+	dstPath string
 	opsLock   bool
 )
 
@@ -40,7 +40,7 @@ func opsHandler(selPane *dirPane, auxPane *dirPane, key rune) {
 			return
 		}
 
-		copyPath = selPane.path + selPane.tbl.GetCell(row, 0).Text
+		srcPath = selPane.path + selPane.tbl.GetCell(row, 0).Text
 
 		if key == 'm' {
 			ops = opMove
@@ -59,7 +59,7 @@ func opsHandler(selPane *dirPane, auxPane *dirPane, key rune) {
 			return
 		}
 
-		pastePath = filepath.Join(selPane.path, path.Base(copyPath))
+		dstPath = filepath.Join(selPane.path, path.Base(srcPath))
 		opsLock = false
 	case 'd':
 		if opsLock {
@@ -69,12 +69,12 @@ func opsHandler(selPane *dirPane, auxPane *dirPane, key rune) {
 		auxPane.tbl.SetSelectable(false, false)
 		selPane.tbl.SetSelectable(true, true)
 
-		copyPath = selPane.path + selPane.tbl.GetCell(row, 0).Text
-		pastePath = ""
+		srcPath = selPane.path + selPane.tbl.GetCell(row, 0).Text
+		dstPath = ""
 		ops = opDelete
 	}
 
-	showOpConfirm(ops, copyPath, pastePath, func() {
-		go startOpsWork(auxPane, selPane, ops, copyPath, pastePath)
+	showOpConfirm(ops, srcPath, dstPath, func() {
+		go startOpsWork(auxPane, selPane, ops, srcPath, dstPath)
 	})
 }

@@ -13,13 +13,13 @@ var (
 	opPathLock sync.Mutex
 )
 
-func newOpsWork(pane *dirPane, ops opsMode, copyPath, pastePath string) opsWork {
+func newOpsWork(pane *dirPane, ops opsMode, srcPath, dstPath string) opsWork {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return opsWork{
 		id:        jobNum,
-		src:       copyPath,
-		dst:       pastePath,
+		src:       srcPath,
+		dst:       dstPath,
 		pane:      pane,
 		ctx:       ctx,
 		cancel:    cancel,
@@ -31,25 +31,25 @@ func newOpsWork(pane *dirPane, ops opsMode, copyPath, pastePath string) opsWork 
 	}
 }
 
-func startOpsWork(cpPane, psPane *dirPane, ops opsMode, cpPath, psPath string) {
-	if checkOpPaths(cpPath) {
+func startOpsWork(srcPane, dstPane *dirPane, ops opsMode, srcPath, dstPath string) {
+	if checkOpPaths(srcPath) {
 		return
 	}
 
-	op := newOpsWork(psPane, ops, cpPath, psPath)
+	op := newOpsWork(dstPane, ops, srcPath, dstPath)
 
 	jobList = append(jobList, op)
 
-	if (cpPane.mode == mLocal) && (psPane.mode == mAdb) {
+	if (srcPane.mode == mLocal) && (dstPane.mode == mAdb) {
 		op.transfer = localToAdb
-	} else if (cpPane.mode == mAdb) && (psPane.mode == mLocal) {
+	} else if (srcPane.mode == mAdb) && (dstPane.mode == mLocal) {
 		op.transfer = adbToLocal
-	} else if (cpPane.mode == mAdb) && (psPane.mode == mAdb) {
+	} else if (srcPane.mode == mAdb) && (dstPane.mode == mAdb) {
 		op.transfer = adbToAdb
 	}
 
-	if psPath == "" {
-		if psPane.mode == mAdb {
+	if dstPath == "" {
+		if dstPane.mode == mAdb {
 			op.transfer = adbToAdb
 		} else {
 			op.transfer = localToLocal
@@ -65,11 +65,11 @@ func startOpsWork(cpPane, psPane *dirPane, ops opsMode, cpPath, psPath string) {
 	op.finished = true
 
 	app.QueueUpdateDraw(func() {
-		cpPane.ChangeDir(false, false)
-		psPane.ChangeDir(false, false)
+		srcPane.ChangeDir(false, false)
+		dstPane.ChangeDir(false, false)
 	})
 
-	removeOpPath(cpPath)
+	removeOpPath(srcPath)
 }
 
 func removeOpPath(opPath string) {
@@ -125,13 +125,13 @@ func clearAllOps() bool {
 	return true
 }
 
-func showOpConfirm(op opsMode, copyPath, pastePath string, DoFunc func()) {
+func showOpConfirm(op opsMode, srcPath, dstPath string, DoFunc func()) {
 	alert := false
 
-	msg := op.String() + " " + copyPath
+	msg := op.String() + " " + srcPath
 
-	if pastePath != "" {
-		msg = msg + " to " + pastePath
+	if dstPath != "" {
+		msg = msg + " to " + dstPath
 	}
 
 	msg = msg + "?"
