@@ -317,22 +317,22 @@ func errmodal(p, b tview.Primitive, width, height int) tview.Primitive {
 		AddItem(nil, 0, 1, false)
 }
 
-func setPaneTitle(pane *dirPane) {
+func (p *dirPane) setPaneTitle() {
 	prefix := ""
 
-	switch pane.mode {
+	switch p.mode {
 	case mAdb:
 		prefix = "Adb"
 	case mLocal:
 		prefix = "Local"
 	}
 
-	if pane.path == "./" || pane.path == "../" {
-		pane.path = "/"
+	if p.path == "./" || p.path == "../" {
+		p.path = "/"
 	}
 
-	title := fmt.Sprintf("|- %s: %s -|", prefix, pane.path)
-	pane.tbl.SetTitle(title)
+	title := fmt.Sprintf("|- %s: %s -|", prefix, p.path)
+	p.tbl.SetTitle(title)
 }
 
 func (p *dirPane) updateDirPane(row int, name string) {

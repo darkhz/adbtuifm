@@ -164,7 +164,7 @@ func (p *dirPane) ChangeDir(cdFwd bool, cdBack bool) {
 		p.updateDirPane(row, dir.Name)
 	}
 
-	setPaneTitle(p)
+	p.setPaneTitle()
 	p.tbl.Select(0, 0)
 	p.tbl.ScrollToBeginning()
 }
