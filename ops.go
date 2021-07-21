@@ -32,7 +32,7 @@ func newOpsWork(pane *dirPane, ops opsMode, srcPath, dstPath string) opsWork {
 }
 
 func startOpsWork(srcPane, dstPane *dirPane, ops opsMode, srcPath, dstPath string) {
-	if checkOpPaths(srcPath) {
+	if checkOpPaths(srcPath, dstPath) {
 		return
 	}
 
@@ -69,37 +69,43 @@ func startOpsWork(srcPane, dstPane *dirPane, ops opsMode, srcPath, dstPath strin
 		dstPane.ChangeDir(false, false)
 	})
 
-	removeOpPath(srcPath)
+	removeOpPaths(srcPath, dstPath)
 }
 
-func removeOpPath(opPath string) {
+func removeOpPaths(srcPath, dstPath string) {
 	opPathLock.Lock()
 	defer opPathLock.Unlock()
 
-	for i, name := range opPaths {
-		if name == opPath {
-			opPaths[i] = opPaths[len(opPaths)-1]
-			opPaths[len(opPaths)-1] = ""
-			opPaths = opPaths[:len(opPaths)-1]
+	var paths []string
 
-			return
+	for _, path := range opPaths {
+		if path == srcPath || path == dstPath {
+			continue
 		}
+
+		paths = append(paths, path)
 	}
+
+	opPaths = paths
 }
 
-func checkOpPaths(opPath string) bool {
+func checkOpPaths(srcPath, dstPath string) bool {
 	opPathLock.Lock()
 	defer opPathLock.Unlock()
 
-	for _, name := range opPaths {
-		if name == opPath {
-			err := errors.New("Already operating on" + name)
+	for _, path := range opPaths {
+		if path == srcPath || path == dstPath {
+			err := errors.New("Already operating on " + path)
 			showError(err, false)
 			return true
 		}
 	}
 
-	opPaths = append(opPaths, opPath)
+	if dstPath != "" {
+		opPaths = append(opPaths, dstPath)
+	}
+	opPaths = append(opPaths, srcPath)
+
 	return false
 }
 
