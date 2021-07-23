@@ -121,6 +121,7 @@ func (p *dirPane) adbListDir(testPath string, autocomplete bool) ([]string, bool
 
 	device, err := getAdb()
 	if err != nil {
+		showError(err, autocomplete)
 		return nil, false
 	}
 
