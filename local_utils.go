@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -59,7 +60,7 @@ func (p *dirPane) isDir(testPath string) bool {
 func (p *dirPane) localListDir(testPath string, autocomplete bool) ([]string, bool) {
 	var dlist []string
 
-	fi, err := os.Lstat(testPath)
+	_, err := os.Lstat(testPath)
 	if err != nil {
 		showError(err, autocomplete)
 		return nil, false
@@ -72,23 +73,18 @@ func (p *dirPane) localListDir(testPath string, autocomplete bool) ([]string, bo
 	}
 	defer file.Close()
 
-	list, _ := file.Readdirnames(0)
+	list, _ := ioutil.ReadDir(testPath)
 
-	for _, name := range list {
+	for _, entry := range list {
 		var d adb.DirEntry
+
+		name := entry.Name()
 
 		if p.hidden && strings.HasPrefix(name, ".") {
 			continue
 		}
 
-		fi, err = os.Lstat(testPath + name)
-		if err != nil {
-			showError(err, autocomplete)
-			return nil, false
-		}
-
-		mode := fi.Mode()
-		if mode.IsDir() {
+		if entry.IsDir() {
 			dlist = append(dlist, testPath+name)
 			name = name + "/"
 		}
@@ -98,9 +94,9 @@ func (p *dirPane) localListDir(testPath string, autocomplete bool) ([]string, bo
 		}
 
 		d.Name = name
-		d.Mode = mode
-		d.Size = int32(fi.Size())
-		d.ModifiedAt = fi.ModTime()
+		d.Mode = entry.Mode()
+		d.Size = int32(entry.Size())
+		d.ModifiedAt = entry.ModTime()
 
 		p.pathList = append(p.pathList, &d)
 	}
