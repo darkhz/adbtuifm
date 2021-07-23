@@ -56,9 +56,6 @@ func setupPaneView() *tview.Flex {
 	selPane.tbl.SetBackgroundColor(tcell.Color16)
 	auxPane.tbl.SetBackgroundColor(tcell.Color16)
 
-	selPane.ChangeDir(false, false)
-	auxPane.ChangeDir(false, false)
-
 	return flex
 }
 
@@ -117,8 +114,6 @@ func setupInfoView() *tview.Table {
 }
 
 func setupPane(selPane *dirPane, auxPane *dirPane) {
-	selPane.ChangeDir(false, false)
-
 	selPane.tbl.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		selPane.row, _ = selPane.tbl.GetSelection()
 
@@ -174,6 +169,8 @@ func setupPane(selPane *dirPane, auxPane *dirPane) {
 
 	selPane.tbl.SetBorder(true)
 	selPane.tbl.SetSelectable(true, true)
+
+	selPane.ChangeDir(false, false)
 }
 
 func (p *dirPane) showChangeDirInput() {
