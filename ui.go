@@ -181,21 +181,15 @@ func (p *dirPane) showChangeDirInput() {
 	input.SetText(p.path)
 
 	input.SetAutocompleteFunc(func(current string) (entries []string) {
-		var iserr bool
-
 		if len(current) == 0 || !strings.HasSuffix(current, "/") {
 			return
 		}
 
 		switch p.mode {
 		case mAdb:
-			entries, iserr = p.adbListDir(current, true)
+			entries, _ = p.adbListDir(current, true)
 		case mLocal:
-			entries, iserr = p.localListDir(current, true)
-		}
-
-		if !iserr {
-			return
+			entries, _ = p.localListDir(current, true)
 		}
 
 		return
