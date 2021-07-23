@@ -19,19 +19,16 @@ func checkAdb() bool {
 }
 
 func getAdb() (*adb.Device, error) {
-	clientNotFound := fmt.Errorf("ADB client not found")
-	deviceNotFound := fmt.Errorf("ADB device not found")
-
 	client, err := adb.NewWithConfig(adb.ServerConfig{})
 	if err != nil {
-		return nil, clientNotFound
+		return nil, fmt.Errorf("ADB client not found")
 	}
 
 	device := client.Device(adb.AnyDevice())
 
 	state, err := device.State()
 	if err != nil || state != adb.StateOnline {
-		return nil, deviceNotFound
+		return nil, fmt.Errorf("ADB device not found")
 	}
 
 	return device, nil
