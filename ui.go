@@ -159,6 +159,7 @@ func setupPane(selPane *dirPane, auxPane *dirPane) {
 			}
 			selPane.ChangeDir(false, false)
 		case 'g':
+			prevPane = selPane
 			selPane.showChangeDirInput()
 		case 'q':
 			stopApp()
