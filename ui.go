@@ -263,7 +263,7 @@ func showErrorModal(msg string) {
 func showConfirmModal(msg string, alert bool, Dofunc func()) {
 	msgbox := tview.NewModal().
 		SetText(msg).
-		AddButtons([]string{"Ok", "Cancel"}).
+		AddButtons([]string{"Cancel", "Ok"}).
 		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
 			if buttonLabel == "Ok" {
 				Dofunc()
