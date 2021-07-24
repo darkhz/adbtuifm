@@ -104,10 +104,14 @@ func (p *dirPane) localListDir(testPath string, autocomplete bool) ([]string, bo
 	return dlist, true
 }
 
-func (p *dirPane) ChangeDir(cdFwd bool, cdBack bool) {
-	row := p.row
-	origPath := p.path
-	testPath := trimPath(p.path, false)
+func (p *dirPane) ChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
+	var testPath string
+
+	if tpath != nil {
+		testPath = tpath[0]
+	} else {
+		testPath = p.path
+	}
 
 	if cdFwd && p.pathList != nil && !p.isDir(testPath) {
 		return
@@ -115,34 +119,25 @@ func (p *dirPane) ChangeDir(cdFwd bool, cdBack bool) {
 
 	p.pathList = nil
 
-	if cdFwd && row != -1 {
-		testPath = testPath + p.tbl.GetCell(row, 0).Text
+	if cdFwd {
+		testPath = trimPath(testPath, false)
+		testPath = path.Join(testPath, p.tbl.GetCell(p.row, 0).Text)
 	} else if cdBack {
 		testPath = trimPath(testPath, cdBack)
 	}
 
 	switch p.mode {
 	case mAdb:
-		origPath = p.apath
 		_, cdFwd = p.adbListDir(testPath, false)
 	case mLocal:
-		origPath = p.dpath
 		_, cdFwd = p.localListDir(filepath.FromSlash(testPath), false)
 	}
 
-	if p.pathList == nil && !cdFwd {
-		p.path = filepath.ToSlash(trimPath(origPath, false))
+	if !cdFwd {
 		return
 	}
 
-	p.path = filepath.ToSlash(trimPath(testPath, false))
-
-	switch p.mode {
-	case mAdb:
-		p.apath = p.path
-	case mLocal:
-		p.dpath = p.path
-	}
+	p.path = filepath.ToSlash(testPath)
 
 	sort.Slice(p.pathList, func(i, j int) bool {
 		if p.pathList[i].Mode.IsDir() != p.pathList[j].Mode.IsDir() {
