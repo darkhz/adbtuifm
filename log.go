@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strconv"
 	"sync"
@@ -17,19 +16,12 @@ func showError(err error, autocomplete bool) {
 		return
 	}
 
-	showErrorModal(err.Error())
-}
-
-func (o *opsWork) opErr(err error) {
 	app.QueueUpdateDraw(func() {
-		showError(err, false)
+		showErrorModal(err.Error())
 	})
 }
 
 func (o *opsWork) updateOpsView(col int, msg string) {
-	updateOps.Lock()
-	defer updateOps.Unlock()
-
 	app.QueueUpdateDraw(func() {
 		if col == 0 {
 			opsView.SetCell(o.id+1, col, tview.NewTableCell(msg).
@@ -44,6 +36,9 @@ func (o *opsWork) updateOpsView(col int, msg string) {
 }
 
 func (o *opsWork) opLog(status opStatus, err error) {
+	updateOps.Lock()
+	defer updateOps.Unlock()
+
 	switch status {
 	case opInProgress:
 		path := o.src
@@ -57,21 +52,17 @@ func (o *opsWork) opLog(status opStatus, err error) {
 		o.updateOpsView(1, o.ops.String())
 		o.updateOpsView(2, path)
 		o.updateOpsView(3, "IN PROGRESS")
-
-		opsView.ScrollToEnd()
 	case opDone:
-		if err != nil {
-			if errors.Is(err, context.Canceled) {
-				o.updateOpsView(3, "[red]CANCELED")
-				return
-			}
-
-			o.updateOpsView(3, "[red]ERROR")
-			o.opErr(err)
-		} else {
-			o.updateOpsView(3, "[green]DONE")
-		}
-
 		o.cancel()
+
+		switch err {
+		case nil:
+			o.updateOpsView(3, "[green]DONE")
+		case context.Canceled:
+			o.updateOpsView(3, "[red]CANCELED")
+		default:
+			o.updateOpsView(3, "[red]ERROR")
+			showError(err, false)
+		}
 	}
 }

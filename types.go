@@ -5,6 +5,7 @@ import (
 
 	"github.com/rivo/tview"
 	adb "github.com/zach-klippenstein/goadb"
+	"golang.org/x/sync/semaphore"
 )
 
 type transferMode int
@@ -40,8 +41,9 @@ const (
 )
 
 type dirPane struct {
-	tbl      *tview.Table
 	row      int
+	lock     *semaphore.Weighted
+	tbl      *tview.Table
 	mode     ifaceMode
 	path     string
 	apath    string

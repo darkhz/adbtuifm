@@ -11,7 +11,7 @@ import (
 func checkAdb() bool {
 	_, err := getAdb()
 	if err != nil {
-		showError(err, false)
+		showErrorModal(err.Error())
 		return false
 	}
 
@@ -58,7 +58,7 @@ func (o *opsWork) adbOps() {
 
 	device, err := getAdb()
 	if err != nil {
-		o.opErr(err)
+		showError(err, false)
 		return
 	}
 

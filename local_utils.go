@@ -104,8 +104,12 @@ func (p *dirPane) localListDir(testPath string, autocomplete bool) ([]string, bo
 	return dlist, true
 }
 
-func (p *dirPane) ChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
+func (p *dirPane) doChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
 	var testPath string
+
+	defer p.setUnlock()
+
+	p.updateRow(true)
 
 	if tpath != nil {
 		testPath = tpath[0]
@@ -147,13 +151,44 @@ func (p *dirPane) ChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
 		return p.pathList[i].Name < p.pathList[j].Name
 	})
 
-	p.tbl.Clear()
+	app.QueueUpdateDraw(func() {
+		p.tbl.Clear()
 
-	for row, dir := range p.pathList {
-		p.updateDirPane(row, dir.Name)
+		for row, dir := range p.pathList {
+			p.updateDirPane(row, dir.Name)
+		}
+
+		p.setPaneTitle()
+		p.tbl.Select(0, 0)
+		p.tbl.ScrollToBeginning()
+	})
+}
+
+func (p *dirPane) ChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
+	go func() {
+		for {
+			if ok := p.getLock(); ok {
+				p.doChangeDir(cdFwd, cdBack, tpath...)
+				break
+			}
+		}
+	}()
+}
+
+func (p *dirPane) setHidden() {
+	if p.hidden == false {
+		p.hidden = true
+	} else {
+		p.hidden = false
 	}
 
-	p.setPaneTitle()
-	p.tbl.Select(0, 0)
-	p.tbl.ScrollToBeginning()
+	p.ChangeDir(false, false)
+}
+
+func (p *dirPane) getLock() bool {
+	return p.lock.TryAcquire(1)
+}
+
+func (p *dirPane) setUnlock() {
+	p.lock.Release(1)
 }

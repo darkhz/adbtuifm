@@ -7,6 +7,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	"golang.org/x/sync/semaphore"
 )
 
 var (
@@ -32,11 +33,8 @@ func setupUI() {
 }
 
 func setupPaneView() *tview.Flex {
-	var leftpane = dirPane{tview.NewTable(), 0, initMode, initPath, initAPath, initLPath, true, nil}
-	var rightpane = dirPane{tview.NewTable(), 0, initMode, initPath, initAPath, initLPath, true, nil}
-
-	selPane := &leftpane
-	auxPane := &rightpane
+	selPane := &dirPane{0, semaphore.NewWeighted(1), tview.NewTable(), initMode, initPath, initAPath, initLPath, true, nil}
+	auxPane := &dirPane{0, semaphore.NewWeighted(1), tview.NewTable(), initMode, initPath, initAPath, initLPath, true, nil}
 
 	prevPane = selPane
 
@@ -46,13 +44,13 @@ func setupPaneView() *tview.Flex {
 	flex := tview.NewFlex().
 		AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
 			AddItem(tview.NewFlex().SetDirection(tview.FlexColumn).
-				AddItem(leftpane.tbl, 0, 1, true).
-				AddItem(rightpane.tbl, 0, 1, false), 0, 2, true), 0, 2, false)
+				AddItem(selPane.tbl, 0, 1, true).
+				AddItem(auxPane.tbl, 0, 1, false), 0, 2, true), 0, 2, false)
 
 	flex.SetBorder(true)
 	flex.SetTitle("| ADBTuiFM |")
-
 	flex.SetBackgroundColor(tcell.Color16)
+
 	selPane.tbl.SetBackgroundColor(tcell.Color16)
 	auxPane.tbl.SetBackgroundColor(tcell.Color16)
 
@@ -88,78 +86,67 @@ func setupInfoView() *tview.Table {
 		return event
 	})
 
-	opsView.SetTitle("| Operations |")
-	opsView.SetFixed(1, 1)
 	opsView.SetCell(0, 0, tview.NewTableCell("ID").
 		SetSelectable(false))
+
 	opsView.SetCell(0, 1, tview.NewTableCell("Type").
 		SetExpansion(1).
 		SetAlign(tview.AlignCenter).
 		SetSelectable(false))
+
 	opsView.SetCell(0, 2, tview.NewTableCell("Path").
 		SetExpansion(1).
 		SetAlign(tview.AlignCenter).
 		SetSelectable(false))
+
 	opsView.SetCell(0, 3, tview.NewTableCell("Status").
 		SetExpansion(1).
 		SetAlign(tview.AlignCenter).
 		SetSelectable(false))
+
+	opsView.SetFixed(1, 1)
 	opsView.SetBorder(true)
 	opsView.SetBorders(true)
 	opsView.SetSelectable(false, false)
-
 	opsView.SetBackgroundColor(tcell.Color16)
+
+	opsView.SetTitle("| Operations |")
 
 	return opsView
 }
 
-func setupPane(selPane *dirPane, auxPane *dirPane) {
+func setupPane(selPane, auxPane *dirPane) {
 	selPane.tbl.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		selPane.row, _ = selPane.tbl.GetSelection()
-
 		switch event.Key() {
 		case tcell.KeyEscape:
 			ops = opNone
-			opsLock = false
+			setOpsLock(false)
 			app.SetFocus(auxPane.tbl)
 		case tcell.KeyTab:
-			if !opsLock {
+			if !getOpsLock() {
 				selPane.tbl.SetSelectable(false, false)
 				auxPane.tbl.SetSelectable(true, false)
 				app.SetFocus(auxPane.tbl)
 			}
 		case tcell.KeyEnter:
 			selPane.tbl.SetSelectable(true, true)
-			selPane.tbl.SetSelectedFunc(func(row int, column int) {
-				selPane.ChangeDir(true, false)
-			})
+			selPane.ChangeDir(true, false)
 		case tcell.KeyBackspace, tcell.KeyBackspace2:
 			selPane.ChangeDir(false, true)
 		}
 
 		switch event.Rune() {
 		case 'm', 'c', 'p', 'd':
-			prevPane = selPane
 			opsHandler(selPane, auxPane, event.Rune())
 		case 's':
 			modeSwitchHandler(selPane)
-			selPane.ChangeDir(false, false)
 		case 'r':
 			selPane.ChangeDir(false, false)
 		case 'o':
-			prevPane = selPane
-			pages.SwitchToPage("ops")
-			app.SetFocus(opsView)
-			opsView.SetSelectable(true, false)
+			selPane.gotoOpsPage()
 		case 'h':
-			if selPane.hidden == false {
-				selPane.hidden = true
-			} else {
-				selPane.hidden = false
-			}
-			selPane.ChangeDir(false, false)
+			selPane.setHidden()
 		case 'g':
-			prevPane = selPane
 			selPane.showChangeDirInput()
 		case 'q':
 			stopApp()
@@ -176,10 +163,13 @@ func setupPane(selPane *dirPane, auxPane *dirPane) {
 
 func (p *dirPane) showChangeDirInput() {
 	input := tview.NewInputField()
+
+	input.SetText(p.path)
+	input.SetBorder(true)
 	input.SetTitle("Change Directory to:")
 	input.SetTitleAlign(tview.AlignCenter)
-	input.SetBorder(true)
-	input.SetText(p.path)
+
+	p.updatePrevPane()
 
 	input.SetAutocompleteFunc(func(current string) (entries []string) {
 		if len(current) == 0 || !strings.HasSuffix(current, "/") {
@@ -300,6 +290,13 @@ func errmodal(p, b tview.Primitive, width, height int) tview.Primitive {
 		AddItem(nil, 0, 1, false)
 }
 
+func (p *dirPane) gotoOpsPage() {
+	p.updatePrevPane()
+	app.SetFocus(opsView)
+	pages.SwitchToPage("ops")
+	opsView.SetSelectable(true, false)
+}
+
 func (p *dirPane) setPaneTitle() {
 	prefix := ""
 
@@ -312,15 +309,32 @@ func (p *dirPane) setPaneTitle() {
 
 	if p.path == "./" || p.path == "../" {
 		p.path = "/"
+	} else {
+		p.path = trimPath(p.path, false)
 	}
 
 	title := fmt.Sprintf("|- %s: %s -|", prefix, p.path)
 	p.tbl.SetTitle(title)
 }
 
+func (p *dirPane) updatePrevPane() {
+	prevPane = p
+}
+
 func (p *dirPane) updateDirPane(row int, name string) {
 	p.tbl.SetCell(row, 0, tview.NewTableCell(name).
 		SetTextColor(tcell.ColorSkyblue))
+}
+
+func (p *dirPane) updateRow(lock bool) {
+	if !lock {
+		p.row, _ = p.tbl.GetSelection()
+		return
+	}
+
+	app.QueueUpdateDraw(func() {
+		p.row, _ = p.tbl.GetSelection()
+	})
 }
 
 func stopApp() {

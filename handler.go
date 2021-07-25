@@ -3,6 +3,7 @@ package main
 import (
 	"path"
 	"path/filepath"
+	"sync"
 )
 
 var (
@@ -10,10 +11,16 @@ var (
 	opPaths []string
 	srcPath string
 	dstPath string
-	opsLock bool
+	opslock bool
+	opsLock sync.Mutex
 )
 
 func modeSwitchHandler(pane *dirPane) {
+	if !pane.getLock() {
+		return
+	}
+	defer pane.setUnlock()
+
 	switch pane.mode {
 	case mAdb:
 		pane.mode = mLocal
@@ -32,9 +39,17 @@ func modeSwitchHandler(pane *dirPane) {
 }
 
 func opsHandler(selPane *dirPane, auxPane *dirPane, key rune) {
+	if !selPane.getLock() {
+		return
+	}
+	defer selPane.setUnlock()
+
+	prevPane = selPane
+	selPane.updateRow(false)
+
 	switch key {
 	case 'c', 'm', 'd':
-		if opsLock {
+		if getOpsLock() {
 			return
 		}
 
@@ -50,7 +65,7 @@ func opsHandler(selPane *dirPane, auxPane *dirPane, key rune) {
 		}
 
 		if ops == opMove || ops == opCopy {
-			opsLock = true
+			setOpsLock(true)
 
 			app.SetFocus(auxPane.tbl)
 			auxPane.tbl.SetSelectable(true, true)
@@ -63,15 +78,29 @@ func opsHandler(selPane *dirPane, auxPane *dirPane, key rune) {
 		selPane.tbl.SetSelectable(true, true)
 		auxPane.tbl.SetSelectable(false, false)
 	case 'p':
-		if !opsLock {
+		if !getOpsLock() {
 			return
 		}
 
-		opsLock = false
+		setOpsLock(false)
 		dstPath = filepath.Join(selPane.path, path.Base(srcPath))
 	}
 
 	showOpConfirm(ops, srcPath, dstPath, func() {
 		go startOpsWork(auxPane, selPane, ops, srcPath, dstPath)
 	})
+}
+
+func getOpsLock() bool {
+	opsLock.Lock()
+	defer opsLock.Unlock()
+
+	return opslock
+}
+
+func setOpsLock(setlock bool) {
+	opsLock.Lock()
+	defer opsLock.Unlock()
+
+	opslock = setlock
 }
