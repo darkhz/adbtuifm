@@ -59,6 +59,10 @@ func setupPaneView() *tview.Flex {
 }
 
 func setupInfoView() *tview.Table {
+	if opsView != nil {
+		goto HEADER
+	}
+
 	opsView = tview.NewTable()
 
 	opsView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
@@ -82,6 +86,8 @@ func setupInfoView() *tview.Table {
 			r, _ := opsView.GetSelection()
 			id, _ := strconv.Atoi(opsView.GetCell(r, 0).Text)
 			cancelOps(id)
+		case 'C':
+			clearAllOps()
 		case 'X':
 			go cancelAllOps()
 		}
@@ -89,6 +95,7 @@ func setupInfoView() *tview.Table {
 		return event
 	})
 
+HEADER:
 	opsView.SetCell(0, 0, tview.NewTableCell("ID").
 		SetSelectable(false))
 

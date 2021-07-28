@@ -62,8 +62,6 @@ func startOpsWork(srcPane, dstPane *dirPane, ops opsMode, srcPath, dstPath strin
 		op.localOps()
 	}
 
-	op.finished = true
-
 	app.QueueUpdateDraw(func() {
 		srcPane.ChangeDir(false, false)
 		dstPane.ChangeDir(false, false)
@@ -109,7 +107,16 @@ func checkOpPaths(srcPath, dstPath string) bool {
 	return false
 }
 
+func jobFinished(id int) {
+	jobList[id].finished = true
+}
+
 func cancelOps(id int) {
+	if !getUpdateLock() {
+		return
+	}
+	defer setUpdateUnlock()
+
 	jobList[id].cancel()
 }
 
@@ -119,16 +126,23 @@ func cancelAllOps() {
 	}
 }
 
-func clearAllOps() bool {
+func clearAllOps() {
+	if !getUpdateLock() {
+		return
+	}
+	defer setUpdateUnlock()
+
 	for id := range jobList {
 		if !jobList[id].finished {
-			return false
+			return
 		}
 	}
 
 	jobNum = 0
+	jobList = nil
 
-	return true
+	opsView.Clear()
+	setupInfoView()
 }
 
 func showOpConfirm(op opsMode, srcPath, dstPath string, DoFunc func()) {

@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"sync"
 
 	"github.com/rivo/tview"
+	"golang.org/x/sync/semaphore"
 )
 
-var updateOps sync.Mutex
+var updateLock = semaphore.NewWeighted(1)
 
 func showError(err error, autocomplete bool) {
 	if autocomplete {
@@ -36,8 +36,12 @@ func (o *opsWork) updateOpsView(col int, msg string) {
 }
 
 func (o *opsWork) opLog(status opStatus, err error) {
-	updateOps.Lock()
-	defer updateOps.Unlock()
+	for {
+		if getUpdateLock() {
+			break
+		}
+	}
+	defer setUpdateUnlock()
 
 	switch status {
 	case opInProgress:
@@ -64,5 +68,15 @@ func (o *opsWork) opLog(status opStatus, err error) {
 			o.updateOpsView(3, "[red]ERROR")
 			showError(err, false)
 		}
+
+		jobFinished(o.id)
 	}
+}
+
+func getUpdateLock() bool {
+	return updateLock.TryAcquire(1)
+}
+
+func setUpdateUnlock() {
+	updateLock.Release(1)
 }
