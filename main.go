@@ -59,6 +59,7 @@ func main() {
 
 	jobNum = 0
 	setOpsLock(false)
+	setProgress(false)
 
 	setupUI()
 }

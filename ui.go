@@ -64,6 +64,7 @@ func setupInfoView() *tview.Table {
 	opsView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
 		case tcell.KeyEscape:
+			setProgress(false)
 			pages.SwitchToPage("main")
 			app.SetFocus(prevPane.tbl)
 			opsView.SetSelectable(false, false)
@@ -71,6 +72,7 @@ func setupInfoView() *tview.Table {
 
 		switch event.Rune() {
 		case 'o':
+			setProgress(false)
 			pages.SwitchToPage("main")
 			app.SetFocus(prevPane.tbl)
 			opsView.SetSelectable(false, false)
@@ -297,6 +299,7 @@ func errmodal(p, b tview.Primitive, width, height int) tview.Primitive {
 }
 
 func (p *dirPane) gotoOpsPage() {
+	setProgress(true)
 	p.updatePrevPane()
 	app.SetFocus(opsView)
 	pages.SwitchToPage("ops")
