@@ -245,7 +245,7 @@ func showErrorModal(msg string) {
 	msg = fmt.Sprintf("[red]An error has occurred:\n\n%s", msg)
 	errview.SetText(msg)
 
-	pages.AddAndSwitchToPage("modal", errmodal(errview, okbtn, 60, 12), true).ShowPage("main")
+	pages.AddAndSwitchToPage("modal", errmodal(errview, okbtn, 50, 10), true).ShowPage("main")
 	app.SetFocus(okbtn)
 }
 
