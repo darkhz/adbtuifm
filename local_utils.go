@@ -7,9 +7,12 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 
 	adb "github.com/zach-klippenstein/goadb"
 )
+
+var hiddenlock sync.Mutex
 
 func trimPath(testPath string, cdBack bool) string {
 	testPath = path.Clean(testPath)
@@ -80,7 +83,7 @@ func (p *dirPane) localListDir(testPath string, autocomplete bool) ([]string, bo
 
 		name := entry.Name()
 
-		if p.hidden && strings.HasPrefix(name, ".") {
+		if p.getHidden() && strings.HasPrefix(name, ".") {
 			continue
 		}
 
@@ -130,6 +133,8 @@ func (p *dirPane) doChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
 		testPath = trimPath(testPath, cdBack)
 	}
 
+	p.setPaneListStatus(true)
+
 	switch p.mode {
 	case mAdb:
 		_, cdFwd = p.adbListDir(testPath, false)
@@ -161,6 +166,8 @@ func (p *dirPane) doChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
 		p.setPaneTitle()
 		p.tbl.Select(0, 0)
 		p.tbl.ScrollToBeginning()
+
+		p.setPaneListStatus(false)
 	})
 }
 
@@ -173,16 +180,6 @@ func (p *dirPane) ChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
 			}
 		}
 	}()
-}
-
-func (p *dirPane) setHidden() {
-	if p.hidden == false {
-		p.hidden = true
-	} else {
-		p.hidden = false
-	}
-
-	p.ChangeDir(false, false)
 }
 
 func (p *dirPane) getLock() bool {

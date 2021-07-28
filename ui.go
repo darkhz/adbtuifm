@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -33,8 +34,8 @@ func setupUI() {
 }
 
 func setupPaneView() *tview.Flex {
-	selPane := &dirPane{0, semaphore.NewWeighted(1), tview.NewTable(), initMode, initPath, initAPath, initLPath, true, nil}
-	auxPane := &dirPane{0, semaphore.NewWeighted(1), tview.NewTable(), initMode, initPath, initAPath, initLPath, true, nil}
+	selPane := &dirPane{0, semaphore.NewWeighted(1), sync.Mutex{}, tview.NewTable(), initMode, initPath, initAPath, initLPath, true, false, nil}
+	auxPane := &dirPane{0, semaphore.NewWeighted(1), sync.Mutex{}, tview.NewTable(), initMode, initPath, initAPath, initLPath, true, false, nil}
 
 	prevPane = selPane
 
@@ -121,7 +122,8 @@ func setupPane(selPane, auxPane *dirPane) {
 		case tcell.KeyEscape:
 			ops = opNone
 			setOpsLock(false)
-			app.SetFocus(auxPane.tbl)
+			app.SetFocus(selPane.tbl)
+			selPane.setPaneOpStatus(false)
 		case tcell.KeyTab:
 			if !getOpsLock() {
 				selPane.tbl.SetSelectable(false, false)
@@ -132,6 +134,10 @@ func setupPane(selPane, auxPane *dirPane) {
 			selPane.tbl.SetSelectable(true, true)
 			selPane.ChangeDir(true, false)
 		case tcell.KeyBackspace, tcell.KeyBackspace2:
+			if selPane.getPending() {
+				return nil
+			}
+
 			selPane.ChangeDir(false, true)
 		}
 
@@ -335,6 +341,65 @@ func (p *dirPane) updateRow(lock bool) {
 	app.QueueUpdateDraw(func() {
 		p.row, _ = p.tbl.GetSelection()
 	})
+}
+
+func (p *dirPane) setPaneOpStatus(pending bool) {
+	color := tcell.ColorSteelBlue
+
+	if !pending {
+		color = tcell.ColorWhite
+	}
+
+	p.tbl.SetBorderColor(color)
+}
+
+func (p *dirPane) setPaneListStatus(pending bool) {
+	if !pending {
+		p.setPending(false)
+		p.tbl.SetSelectable(true, false)
+		return
+	}
+
+	p.setPending(true)
+	app.QueueUpdateDraw(func() {
+		p.tbl.SetSelectable(false, false)
+	})
+}
+
+func (p *dirPane) setPending(pending bool) {
+	p.plock.Lock()
+	defer p.plock.Unlock()
+
+	p.pending = pending
+}
+
+func (p *dirPane) setHidden() {
+	p.plock.Lock()
+
+	switch p.hidden {
+	case true:
+		p.hidden = false
+	case false:
+		p.hidden = true
+	}
+
+	p.plock.Unlock()
+
+	p.ChangeDir(false, false)
+}
+
+func (p *dirPane) getPending() bool {
+	p.plock.Lock()
+	defer p.plock.Unlock()
+
+	return p.pending
+}
+
+func (p *dirPane) getHidden() bool {
+	p.plock.Lock()
+	defer p.plock.Unlock()
+
+	return p.hidden
 }
 
 func stopApp() {

@@ -16,6 +16,10 @@ var (
 )
 
 func modeSwitchHandler(pane *dirPane) {
+	if pane.getPending() {
+		return
+	}
+
 	if !pane.getLock() {
 		return
 	}
@@ -38,7 +42,7 @@ func modeSwitchHandler(pane *dirPane) {
 	pane.ChangeDir(false, false)
 }
 
-func opsHandler(selPane *dirPane, auxPane *dirPane, key rune) {
+func opsHandler(selPane, auxPane *dirPane, key rune) {
 	if !selPane.getLock() {
 		return
 	}
@@ -71,6 +75,8 @@ func opsHandler(selPane *dirPane, auxPane *dirPane, key rune) {
 			auxPane.tbl.SetSelectable(true, true)
 			selPane.tbl.SetSelectable(false, false)
 
+			auxPane.setPaneOpStatus(true)
+
 			return
 		}
 
@@ -84,6 +90,8 @@ func opsHandler(selPane *dirPane, auxPane *dirPane, key rune) {
 
 		setOpsLock(false)
 		dstPath = filepath.Join(selPane.path, path.Base(srcPath))
+
+		selPane.setPaneOpStatus(false)
 	}
 
 	showOpConfirm(ops, srcPath, dstPath, func() {

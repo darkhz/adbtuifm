@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"sync"
 
 	"github.com/rivo/tview"
 	adb "github.com/zach-klippenstein/goadb"
@@ -43,12 +44,14 @@ const (
 type dirPane struct {
 	row      int
 	lock     *semaphore.Weighted
+	plock    sync.Mutex
 	tbl      *tview.Table
 	mode     ifaceMode
 	path     string
 	apath    string
 	dpath    string
 	hidden   bool
+	pending  bool
 	pathList []*adb.DirEntry
 }
 
