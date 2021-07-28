@@ -165,14 +165,14 @@ func (o *opsWork) pushRecursive(src, dst string, device *adb.Device) error {
 	}
 	defer srcfd.Close()
 
-	cmd := fmt.Sprintf("mkdir %s", dst)
+	cmd := fmt.Sprintf("mkdir '%s'", dst)
 	_, err = device.RunCommand(cmd)
 	if err != nil {
 		return err
 	}
 
 	mode := fmt.Sprintf("%04o", stat.Mode().Perm())
-	cmd = fmt.Sprintf("chmod %s %s", mode, dst)
+	cmd = fmt.Sprintf("chmod %s '%s'", mode, dst)
 	_, err = device.RunCommand(cmd)
 	if err != nil {
 		return err
@@ -311,7 +311,7 @@ func (o *opsWork) getTotalFiles() error {
 			return err
 		}
 
-		cmd := fmt.Sprintf("find %s -type f | wc -l", o.src)
+		cmd := fmt.Sprintf("find '%s' -type f | wc -l", o.src)
 		out, err := device.RunCommand(cmd)
 		if err != nil {
 			return err

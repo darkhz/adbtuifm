@@ -40,7 +40,7 @@ func isSymDir(testPath, name string) bool {
 		return false
 	}
 
-	cmd := fmt.Sprintf("ls -pd $(readlink -f %s%s)", testPath, name)
+	cmd := fmt.Sprintf("ls -pd $(readlink -f '%s%s')", testPath, name)
 	out, err := device.RunCommand(cmd)
 	if err != nil {
 		return false
