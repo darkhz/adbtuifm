@@ -16,10 +16,6 @@ var (
 )
 
 func modeSwitchHandler(pane *dirPane) {
-	if pane.getPending() {
-		return
-	}
-
 	if !pane.getLock() {
 		return
 	}

@@ -110,8 +110,6 @@ func (p *dirPane) localListDir(testPath string, autocomplete bool) ([]string, bo
 func (p *dirPane) doChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
 	var testPath string
 
-	defer p.setUnlock()
-
 	p.updateRow(true)
 
 	if tpath != nil {
@@ -173,12 +171,12 @@ func (p *dirPane) doChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
 
 func (p *dirPane) ChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
 	go func() {
-		for {
-			if ok := p.getLock(); ok {
-				p.doChangeDir(cdFwd, cdBack, tpath...)
-				break
-			}
+		if !p.getLock() {
+			return
 		}
+		defer p.setUnlock()
+
+		p.doChangeDir(cdFwd, cdBack, tpath...)
 	}()
 }
 

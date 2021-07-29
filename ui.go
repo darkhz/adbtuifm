@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -34,8 +33,8 @@ func setupUI() {
 }
 
 func setupPaneView() *tview.Flex {
-	selPane := &dirPane{0, semaphore.NewWeighted(1), sync.Mutex{}, tview.NewTable(), initMode, initPath, initAPath, initLPath, true, false, nil}
-	auxPane := &dirPane{0, semaphore.NewWeighted(1), sync.Mutex{}, tview.NewTable(), initMode, initPath, initAPath, initLPath, true, false, nil}
+	selPane := &dirPane{0, semaphore.NewWeighted(1), tview.NewTable(), initMode, initPath, initAPath, initLPath, true, nil}
+	auxPane := &dirPane{0, semaphore.NewWeighted(1), tview.NewTable(), initMode, initPath, initAPath, initLPath, true, nil}
 
 	prevPane = selPane
 
@@ -140,13 +139,8 @@ func setupPane(selPane, auxPane *dirPane) {
 				app.SetFocus(auxPane.tbl)
 			}
 		case tcell.KeyEnter:
-			selPane.tbl.SetSelectable(true, true)
 			selPane.ChangeDir(true, false)
 		case tcell.KeyBackspace, tcell.KeyBackspace2:
-			if selPane.getPending() {
-				return nil
-			}
-
 			selPane.ChangeDir(false, true)
 		}
 
@@ -365,26 +359,20 @@ func (p *dirPane) setPaneOpStatus(pending bool) {
 
 func (p *dirPane) setPaneListStatus(pending bool) {
 	if !pending {
-		p.setPending(false)
 		p.tbl.SetSelectable(true, false)
 		return
 	}
 
-	p.setPending(true)
 	app.QueueUpdateDraw(func() {
 		p.tbl.SetSelectable(false, false)
 	})
 }
 
-func (p *dirPane) setPending(pending bool) {
-	p.plock.Lock()
-	defer p.plock.Unlock()
-
-	p.pending = pending
-}
-
 func (p *dirPane) setHidden() {
-	p.plock.Lock()
+	if !p.getLock() {
+		return
+	}
+	defer p.setUnlock()
 
 	switch p.hidden {
 	case true:
@@ -393,22 +381,10 @@ func (p *dirPane) setHidden() {
 		p.hidden = true
 	}
 
-	p.plock.Unlock()
-
 	p.ChangeDir(false, false)
 }
 
-func (p *dirPane) getPending() bool {
-	p.plock.Lock()
-	defer p.plock.Unlock()
-
-	return p.pending
-}
-
 func (p *dirPane) getHidden() bool {
-	p.plock.Lock()
-	defer p.plock.Unlock()
-
 	return p.hidden
 }
 
