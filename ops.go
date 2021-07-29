@@ -62,10 +62,7 @@ func startOpsWork(srcPane, dstPane *dirPane, ops opsMode, srcPath, dstPath strin
 		op.localOps()
 	}
 
-	app.QueueUpdateDraw(func() {
-		srcPane.ChangeDir(false, false)
-		dstPane.ChangeDir(false, false)
-	})
+	dstPane.ChangeDir(false, false)
 
 	removeOpPaths(srcPath, dstPath)
 }
