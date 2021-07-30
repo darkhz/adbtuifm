@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path"
 	"strings"
 
 	adb "github.com/zach-klippenstein/goadb"
@@ -150,7 +151,7 @@ func (p *dirPane) adbListDir(testPath string, autocomplete bool) ([]string, bool
 		}
 
 		if ent.Mode&os.ModeDir != 0 {
-			dlist = append(dlist, testPath+name)
+			dlist = append(dlist, path.Join(testPath, name))
 			ent.Name = name + "/"
 		}
 

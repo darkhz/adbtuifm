@@ -88,7 +88,7 @@ func (p *dirPane) localListDir(testPath string, autocomplete bool) ([]string, bo
 		}
 
 		if entry.IsDir() {
-			dlist = append(dlist, testPath+name)
+			dlist = append(dlist, path.Join(testPath, name))
 			name = name + "/"
 		}
 

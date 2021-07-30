@@ -15,6 +15,8 @@ var (
 	pages    *tview.Pages
 	opsView  *tview.Table
 	prevPane *dirPane
+
+	entrycache []string
 )
 
 func setupUI() {
@@ -181,15 +183,30 @@ func (p *dirPane) showChangeDirInput() {
 	p.updatePrevPane()
 
 	input.SetAutocompleteFunc(func(current string) (entries []string) {
-		if len(current) == 0 || !strings.HasSuffix(current, "/") {
+		var tmpentry []string
+
+		if len(current) == 0 {
 			return
 		}
 
 		switch p.mode {
 		case mAdb:
-			entries, _ = p.adbListDir(current, true)
+			tmpentry, _ = p.adbListDir(current, true)
 		case mLocal:
-			entries, _ = p.localListDir(current, true)
+			tmpentry, _ = p.localListDir(current, true)
+		}
+
+		switch {
+		case tmpentry != nil:
+			entrycache = tmpentry
+		case tmpentry == nil && entrycache != nil:
+			tmpentry = entrycache
+		}
+
+		for _, ent := range tmpentry {
+			if strings.Index(ent, current) != -1 {
+				entries = append(entries, ent)
+			}
 		}
 
 		return
@@ -197,6 +214,8 @@ func (p *dirPane) showChangeDirInput() {
 
 	input.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
+		case tcell.KeyTab:
+			input.Autocomplete()
 		case tcell.KeyEscape:
 			pages.SwitchToPage("main")
 			app.SetFocus(p.tbl)
@@ -204,6 +223,19 @@ func (p *dirPane) showChangeDirInput() {
 			pages.SwitchToPage("main")
 			app.SetFocus(p.tbl)
 			p.ChangeDir(false, false, input.GetText())
+		case tcell.KeyCtrlW:
+			input.SetText(trimPath(input.GetText(), true))
+			input.Autocomplete()
+			return nil
+		case tcell.KeyBackspace, tcell.KeyBackspace2:
+			fallthrough
+		case tcell.KeyDown, tcell.KeyUp, tcell.KeyLeft, tcell.KeyRight:
+			return event
+		}
+
+		switch event.Rune() {
+		default:
+			input.Autocomplete()
 		}
 
 		return event
