@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 )
 
@@ -13,13 +14,11 @@ var (
 	opPathLock sync.Mutex
 )
 
-func newOpsWork(pane *dirPane, ops opsMode, srcPath, dstPath string) opsWork {
+func newOpsWork(pane *dirPane, ops opsMode) opsWork {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return opsWork{
 		id:        jobNum,
-		src:       srcPath,
-		dst:       dstPath,
 		pane:      pane,
 		ctx:       ctx,
 		cancel:    cancel,
@@ -31,50 +30,74 @@ func newOpsWork(pane *dirPane, ops opsMode, srcPath, dstPath string) opsWork {
 	}
 }
 
-func startOpsWork(srcPane, dstPane *dirPane, ops opsMode, srcPath, dstPath string) {
-	if checkOpPaths(srcPath, dstPath) {
-		return
-	}
+func startOpsWork(srcPane, dstPane *dirPane, ops opsMode, srcs []string) {
+	var err error
 
-	op := newOpsWork(dstPane, ops, srcPath, dstPath)
+	tsrcs := len(srcs)
+	op := newOpsWork(dstPane, ops)
 
 	jobList = append(jobList, op)
 
-	if (srcPane.mode == mLocal) && (dstPane.mode == mAdb) {
-		op.transfer = localToAdb
-	} else if (srcPane.mode == mAdb) && (dstPane.mode == mLocal) {
-		op.transfer = adbToLocal
-	} else if (srcPane.mode == mAdb) && (dstPane.mode == mAdb) {
-		op.transfer = adbToAdb
-	}
-
-	if dstPath == "" {
-		if dstPane.mode == mAdb {
+	if op.ops == opDelete {
+		switch dstPane.mode {
+		case mAdb:
 			op.transfer = adbToAdb
-		} else {
+		case mLocal:
 			op.transfer = localToLocal
 		}
+
+		goto OPSTART
 	}
 
-	if op.transfer != localToLocal {
-		op.adbOps()
-	} else {
-		op.localOps()
+	switch {
+	case srcPane.mode == mLocal && dstPane.mode == mAdb:
+		op.transfer = localToAdb
+	case srcPane.mode == mAdb && dstPane.mode == mLocal:
+		op.transfer = adbToLocal
+	case srcPane.mode == mAdb && dstPane.mode == mAdb:
+		op.transfer = adbToAdb
+	case srcPane.mode == mLocal && dstPane.mode == mLocal:
+		op.transfer = localToLocal
 	}
+
+OPSTART:
+	op.opLog(opInProgress, nil)
+
+	for csrc, src := range srcs {
+		dst := op.updatePathProgress(src, dstPane.getPanePath(), csrc, tsrcs)
+
+		if err = checkOpPaths(src, dst); err != nil {
+			break
+		}
+
+		switch op.transfer {
+		case localToLocal:
+			err = op.localOps(src, dst)
+		default:
+			err = op.adbOps(src, dst)
+		}
+
+		if err != nil {
+			removeOpPaths(src, dst)
+			break
+		}
+
+		removeOpPaths(src, dst)
+	}
+
+	op.opLog(opDone, err)
 
 	dstPane.ChangeDir(false, false)
-
-	removeOpPaths(srcPath, dstPath)
 }
 
-func removeOpPaths(srcPath, dstPath string) {
+func removeOpPaths(src, dst string) {
 	opPathLock.Lock()
 	defer opPathLock.Unlock()
 
 	var paths []string
 
 	for _, path := range opPaths {
-		if path == srcPath || path == dstPath {
+		if path == src || path == dst {
 			continue
 		}
 
@@ -84,24 +107,24 @@ func removeOpPaths(srcPath, dstPath string) {
 	opPaths = paths
 }
 
-func checkOpPaths(srcPath, dstPath string) bool {
+func checkOpPaths(src, dst string) error {
 	opPathLock.Lock()
 	defer opPathLock.Unlock()
 
 	for _, path := range opPaths {
-		if path == srcPath || path == dstPath {
+		if path == src || path == dst {
 			err := fmt.Errorf("Already operating on %s", path)
 			showError(err, false)
-			return true
+			return err
 		}
 	}
 
-	if dstPath != "" {
-		opPaths = append(opPaths, dstPath)
+	if dst != "" {
+		opPaths = append(opPaths, dst)
 	}
-	opPaths = append(opPaths, srcPath)
+	opPaths = append(opPaths, src)
 
-	return false
+	return nil
 }
 
 func jobFinished(id int) {
@@ -142,18 +165,20 @@ func clearAllOps() {
 	setupInfoView()
 }
 
-func showOpConfirm(op opsMode, srcPath, dstPath string, DoFunc func()) {
-	alert := false
+func showOpConfirm(op opsMode, selPane, auxPane *dirPane, paths []string, doFunc func()) {
+	alert := true
+	dstpath := auxPane.getPanePath()
 
-	if dstPath != "" {
-		srcPath = fmt.Sprintf("%s to %s", srcPath, dstPath)
+	msg := fmt.Sprintf("%s selected item(s)", op.String())
+
+	if op != opDelete {
+		alert = false
+		msg = fmt.Sprintf("%s to", msg)
+	} else {
+		msg = fmt.Sprintf("%s from", msg)
 	}
 
-	msg := fmt.Sprintf("%s %s?", op.String(), srcPath)
+	msg = fmt.Sprintf("%s %s?\n\n%s", msg, dstpath, strings.Join(paths, "\n"))
 
-	if op == opDelete {
-		alert = true
-	}
-
-	showConfirmModal(msg, alert, DoFunc)
+	showConfirmModal(msg, alert, doFunc, func() { reset(auxPane, selPane) })
 }

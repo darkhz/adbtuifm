@@ -12,7 +12,7 @@ import (
 	adb "github.com/zach-klippenstein/goadb"
 )
 
-var hiddenlock sync.Mutex
+var pathLock sync.Mutex
 
 func trimPath(testPath string, cdBack bool) string {
 	testPath = path.Clean(testPath)
@@ -28,21 +28,19 @@ func trimPath(testPath string, cdBack bool) string {
 	return testPath
 }
 
-func (o *opsWork) localOps() {
+func (o *opsWork) localOps(src, dst string) error {
 	var err error
-
-	o.opLog(opInProgress, nil)
 
 	switch o.ops {
 	case opMove:
-		err = os.Rename(o.src, o.dst)
+		err = os.Rename(src, dst)
 	case opDelete:
-		err = os.RemoveAll(o.src)
+		err = os.RemoveAll(src)
 	case opCopy:
-		err = o.copyRecursive(o.src, o.dst)
+		err = o.copyRecursive(src, dst)
 	}
 
-	o.opLog(opDone, err)
+	return err
 }
 
 func (p *dirPane) isDir(testPath string) bool {
@@ -144,7 +142,7 @@ func (p *dirPane) doChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
 		return
 	}
 
-	p.path = filepath.ToSlash(testPath)
+	p.updatePanePath(filepath.ToSlash(testPath))
 
 	sort.Slice(p.pathList, func(i, j int) bool {
 		if p.pathList[i].Mode.IsDir() != p.pathList[j].Mode.IsDir() {
@@ -158,7 +156,12 @@ func (p *dirPane) doChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
 		p.tbl.Clear()
 
 		for row, dir := range p.pathList {
-			p.updateDirPane(row, dir.Name)
+			if checkSelected(path.Join(p.path, dir.Name), false) {
+				p.updateDirPane(row, true, nil, dir.Name)
+				continue
+			}
+
+			p.updateDirPane(row, false, nil, dir.Name)
 		}
 
 		p.setPaneTitle()
@@ -178,6 +181,20 @@ func (p *dirPane) ChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
 
 		p.doChangeDir(cdFwd, cdBack, tpath...)
 	}()
+}
+
+func (p *dirPane) updatePanePath(ppath string) {
+	pathLock.Lock()
+	defer pathLock.Unlock()
+
+	p.path = ppath
+}
+
+func (p *dirPane) getPanePath() string {
+	pathLock.Lock()
+	defer pathLock.Unlock()
+
+	return p.path
 }
 
 func (p *dirPane) getLock() bool {

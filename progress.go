@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"path"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -32,6 +34,29 @@ func (o *opsWork) startProgress(curNum int, size int64, pcnt progress.Counter, r
 	}()
 
 	o.currFile++
+}
+
+func (o *opsWork) updatePathProgress(src, dst string, count, total int) string {
+	tpath := src
+	dst = filepath.Join(dst, path.Base(src))
+
+	if o.ops != opDelete {
+		tpath = fmt.Sprintf("%s -> %s", src, dst)
+	}
+
+	o.src = src
+	o.dst = dst
+
+	o.currFile = 0
+	o.totalFile = 0
+
+	if total > 1 {
+		tpath = fmt.Sprintf("%s (%d of %d)", tpath, count+1, total)
+	}
+
+	o.updateOpsView(2, tpath)
+
+	return dst
 }
 
 func setProgress(status bool) {

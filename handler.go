@@ -1,18 +1,18 @@
 package main
 
 import (
-	"path"
 	"path/filepath"
 	"sync"
 )
 
 var (
-	ops     opsMode
-	opPaths []string
-	srcPath string
-	dstPath string
-	opslock bool
-	opsLock sync.Mutex
+	ops      opsMode
+	opPaths  []string
+	srcPaths []string
+	opslock  bool
+	selstart bool
+	opsLock  sync.Mutex
+	selLock  sync.Mutex
 )
 
 func modeSwitchHandler(pane *dirPane) {
@@ -20,6 +20,10 @@ func modeSwitchHandler(pane *dirPane) {
 		return
 	}
 	defer pane.setUnlock()
+
+	if selstart {
+		return
+	}
 
 	switch pane.mode {
 	case mAdb:
@@ -44,7 +48,6 @@ func opsHandler(selPane, auxPane *dirPane, key rune) {
 	}
 	defer selPane.setUnlock()
 
-	prevPane = selPane
 	selPane.updateRow(false)
 
 	switch key {
@@ -53,8 +56,18 @@ func opsHandler(selPane, auxPane *dirPane, key rune) {
 			return
 		}
 
-		selection := selPane.tbl.GetCell(selPane.row, 0).Text
-		srcPath = filepath.Join(selPane.path, selection)
+		if !selstart {
+			selection := selPane.tbl.GetCell(selPane.row, 0).Text
+			if selection == "" {
+				setOpsLock(false)
+				selPane.setPaneOpStatus(false)
+
+				return
+			}
+
+			srcpath := filepath.Join(selPane.path, selection)
+			srcPaths = append(srcPaths, srcpath)
+		}
 
 		if key == 'm' {
 			ops = opMove
@@ -76,7 +89,6 @@ func opsHandler(selPane, auxPane *dirPane, key rune) {
 			return
 		}
 
-		dstPath = ""
 		selPane.tbl.SetSelectable(true, true)
 		auxPane.tbl.SetSelectable(false, false)
 	case 'p':
@@ -84,15 +96,37 @@ func opsHandler(selPane, auxPane *dirPane, key rune) {
 			return
 		}
 
+		selstart = false
 		setOpsLock(false)
-		dstPath = filepath.Join(selPane.path, path.Base(srcPath))
 
 		selPane.setPaneOpStatus(false)
 	}
 
-	showOpConfirm(ops, srcPath, dstPath, func() {
-		go startOpsWork(auxPane, selPane, ops, srcPath, dstPath)
+	showOpConfirm(ops, auxPane, selPane, srcPaths, func() {
+		go startOpsWork(auxPane, selPane, ops, srcPaths)
 	})
+}
+
+func checkSelected(selpath string, rm bool) bool {
+	selLock.Lock()
+	defer selLock.Unlock()
+
+	if !selstart {
+		return false
+	}
+
+	for i, spath := range srcPaths {
+		if selpath == spath {
+			if rm {
+				srcPaths[i] = srcPaths[len(srcPaths)-1]
+				srcPaths = srcPaths[:len(srcPaths)-1]
+			}
+
+			return true
+		}
+	}
+
+	return false
 }
 
 func getOpsLock() bool {

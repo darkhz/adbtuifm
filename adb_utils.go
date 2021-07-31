@@ -54,27 +54,25 @@ func isSymDir(testPath, name string) bool {
 	return true
 }
 
-func (o *opsWork) adbOps() {
+func (o *opsWork) adbOps(src, dst string) error {
 	var err error
 
 	device, err := getAdb()
 	if err != nil {
 		showError(err, false)
-		return
+		return err
 	}
-
-	o.opLog(opInProgress, nil)
 
 	switch o.transfer {
 	case adbToAdb:
 		err = o.execAdbOps(device)
 	case localToAdb:
-		err = o.pushRecursive(o.src, o.dst, device)
+		err = o.pushRecursive(src, dst, device)
 	case adbToLocal:
-		err = o.pullRecursive(o.src, o.dst, device)
+		err = o.pullRecursive(src, dst, device)
 	}
 
-	o.opLog(opDone, err)
+	return err
 }
 
 func (o *opsWork) execAdbOps(device *adb.Device) error {

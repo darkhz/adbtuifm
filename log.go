@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 
 	"github.com/rivo/tview"
@@ -45,16 +44,10 @@ func (o *opsWork) opLog(status opStatus, err error) {
 
 	switch status {
 	case opInProgress:
-		path := o.src
 		jobNum++
-
-		if o.ops != opDelete {
-			path = fmt.Sprintf("%s -> %s", o.src, o.dst)
-		}
 
 		o.updateOpsView(0, strconv.Itoa(o.id))
 		o.updateOpsView(1, o.ops.String())
-		o.updateOpsView(2, path)
 		o.updateOpsView(3, "IN PROGRESS")
 	case opDone:
 		o.cancel()

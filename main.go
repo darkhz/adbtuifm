@@ -58,6 +58,7 @@ func main() {
 	initLPath, _ = filepath.Abs(*cmdLPath)
 
 	jobNum = 0
+	selstart = false
 	setOpsLock(false)
 	setProgress(false)
 

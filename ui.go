@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -128,18 +129,13 @@ HEADER:
 
 func setupPane(selPane, auxPane *dirPane) {
 	selPane.tbl.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		selPane.updatePrevPane()
+
 		switch event.Key() {
 		case tcell.KeyEscape:
-			ops = opNone
-			setOpsLock(false)
-			app.SetFocus(selPane.tbl)
-			selPane.setPaneOpStatus(false)
+			reset(selPane, auxPane)
 		case tcell.KeyTab:
-			if !getOpsLock() {
-				selPane.tbl.SetSelectable(false, false)
-				auxPane.tbl.SetSelectable(true, false)
-				app.SetFocus(auxPane.tbl)
-			}
+			selected(selPane, auxPane)
 		case tcell.KeyEnter:
 			selPane.ChangeDir(true, false)
 		case tcell.KeyBackspace, tcell.KeyBackspace2:
@@ -151,6 +147,10 @@ func setupPane(selPane, auxPane *dirPane) {
 			opsHandler(selPane, auxPane, event.Rune())
 		case 's':
 			modeSwitchHandler(selPane)
+		case 'S':
+			selPane.multiSelect(false)
+		case 'A':
+			selPane.multiSelect(true)
 		case 'r':
 			selPane.ChangeDir(false, false)
 		case 'o':
@@ -179,8 +179,6 @@ func (p *dirPane) showChangeDirInput() {
 	input.SetBorder(true)
 	input.SetTitle("Change Directory to:")
 	input.SetTitleAlign(tview.AlignCenter)
-
-	p.updatePrevPane()
 
 	input.SetAutocompleteFunc(func(current string) (entries []string) {
 		var tmpentry []string
@@ -245,19 +243,79 @@ func (p *dirPane) showChangeDirInput() {
 	app.SetFocus(input)
 }
 
+func showConfirmModal(msg string, alert bool, dofunc, resetfunc func()) {
+	view := tview.NewTextView().
+		SetDynamicColors(true).
+		SetScrollable(true)
+
+	okbtn := tview.NewButton("Ok")
+	cancelbtn := tview.NewButton("Cancel")
+
+	okbtn.SetBackgroundColor(tcell.ColorBlack)
+	cancelbtn.SetBackgroundColor(tcell.ColorBlack)
+
+	if alert {
+		view.SetBackgroundColor(tcell.ColorRed)
+	} else {
+		view.SetBackgroundColor(tcell.ColorBlue)
+	}
+
+	view.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyRight:
+			app.SetFocus(cancelbtn)
+		}
+
+		return event
+	})
+
+	cancelbtn.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyEnter:
+			pages.SwitchToPage("main")
+			resetfunc()
+		case tcell.KeyLeft:
+			app.SetFocus(view)
+		case tcell.KeyRight:
+			app.SetFocus(okbtn)
+
+		}
+
+		return event
+	})
+
+	okbtn.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyEnter:
+			pages.SwitchToPage("main")
+			dofunc()
+			resetfunc()
+		case tcell.KeyLeft:
+			app.SetFocus(cancelbtn)
+		}
+
+		return event
+	})
+
+	msg = fmt.Sprintf("%s", msg)
+	view.SetText(msg)
+
+	pages.AddAndSwitchToPage("modal", infomodal(view, okbtn, cancelbtn, alert, 50, 10), true).ShowPage("main")
+	app.SetFocus(cancelbtn)
+
+}
+
 func showErrorModal(msg string) {
 	errview := tview.NewTextView().
 		SetDynamicColors(true).
 		SetScrollable(true)
 
-	okbtn := tview.NewButton("OK")
+	okbtn := tview.NewButton("Ok")
 
 	errview.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
-		case tcell.KeyDown:
-			app.SetFocus(okbtn)
 		case tcell.KeyRight:
-			errview.ScrollToEnd()
+			app.SetFocus(okbtn)
 		}
 
 		return event
@@ -268,7 +326,7 @@ func showErrorModal(msg string) {
 		case tcell.KeyEnter:
 			pages.SwitchToPage("main")
 			app.SetFocus(prevPane.tbl)
-		case tcell.KeyUp:
+		case tcell.KeyLeft:
 			app.SetFocus(errview)
 		}
 
@@ -280,28 +338,6 @@ func showErrorModal(msg string) {
 
 	pages.AddAndSwitchToPage("modal", errmodal(errview, okbtn, 50, 10), true).ShowPage("main")
 	app.SetFocus(okbtn)
-}
-
-func showConfirmModal(msg string, alert bool, Dofunc func()) {
-	msgbox := tview.NewModal().
-		SetText(msg).
-		AddButtons([]string{"Cancel", "Ok"}).
-		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
-			if buttonLabel == "Ok" {
-				Dofunc()
-			}
-			pages.SwitchToPage("main")
-			app.SetFocus(prevPane.tbl)
-		})
-
-	if alert {
-		msgbox.SetBackgroundColor(tcell.ColorRed)
-	} else {
-		msgbox.SetBackgroundColor(tcell.ColorSteelBlue)
-	}
-
-	pages.AddAndSwitchToPage("modal", modal(msgbox, 80, 29), true).ShowPage("main")
-	app.SetFocus(msgbox)
 }
 
 func modal(p tview.Primitive, width, height int) tview.Primitive {
@@ -331,9 +367,111 @@ func errmodal(p, b tview.Primitive, width, height int) tview.Primitive {
 		AddItem(nil, 0, 1, false)
 }
 
+func infomodal(p, b, c tview.Primitive, alert bool, width, height int) tview.Primitive {
+	flex := tview.NewFlex().
+		AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
+			AddItem(nil, 0, 1, false).
+			AddItem(p, height, 1, false).
+			AddItem(c, 1, 1, false).
+			AddItem(b, 1, 1, false).
+			AddItem(nil, 0, 1, false), width, 1, false)
+
+	flex.SetBorder(true)
+	flex.SetTitle("| INFO |")
+
+	if alert {
+		flex.SetBackgroundColor(tcell.ColorRed)
+	} else {
+		flex.SetBackgroundColor(tcell.ColorBlue)
+	}
+
+	return tview.NewFlex().
+		AddItem(nil, 0, 1, false).
+		AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
+			AddItem(nil, 0, 1, false).
+			AddItem(flex, height+4, 1, false).
+			AddItem(nil, 0, 1, false), width+2, 1, false).
+		AddItem(nil, 0, 1, false)
+}
+
+func reset(selPane, auxPane *dirPane) {
+	ops = opNone
+	srcPaths = nil
+	selstart = false
+
+	setOpsLock(false)
+	selPane.setPaneOpStatus(false)
+
+	app.SetFocus(selPane.tbl)
+	selPane.tbl.SetSelectable(true, false)
+	auxPane.tbl.SetSelectable(false, false)
+
+	selPane.resetSelection()
+	auxPane.resetSelection()
+}
+
+func selected(selPane, auxPane *dirPane) {
+	if !getOpsLock() && !selstart {
+		selPane.tbl.SetSelectable(false, false)
+		auxPane.tbl.SetSelectable(true, false)
+		app.SetFocus(auxPane.tbl)
+	}
+}
+
+func (p *dirPane) multiSelect(all bool) {
+	go func() {
+		if !p.getLock() {
+			return
+		}
+		defer p.setUnlock()
+
+		if getOpsLock() && selstart {
+			return
+		}
+
+		app.QueueUpdateDraw(func() {
+			rows := 1
+			selstart = true
+
+			if all {
+				srcPaths = nil
+				rows = p.tbl.GetRowCount()
+			}
+
+			for i := 0; i < rows; i++ {
+				if !all {
+					i, _ = p.tbl.GetSelection()
+				}
+
+				cell := p.tbl.GetCell(i, 0)
+				if cell.Text == "" {
+					return
+				}
+
+				text := filepath.Join(p.path, cell.Text)
+
+				if checkSelected(text, true) {
+					p.tbl.SetCell(i, 0, cell.SetTextColor(tcell.ColorSkyblue))
+
+					if !all {
+						return
+					}
+
+					continue
+				}
+
+				selLock.Lock()
+				srcPaths = append(srcPaths, text)
+				selLock.Unlock()
+
+				p.tbl.SetCell(i, 0, cell.SetTextColor(tcell.ColorOrange))
+			}
+		})
+	}()
+}
+
 func (p *dirPane) gotoOpsPage() {
 	setProgress(true)
-	p.updatePrevPane()
 	app.SetFocus(opsView)
 	pages.SwitchToPage("ops")
 	opsView.SetSelectable(true, false)
@@ -363,9 +501,39 @@ func (p *dirPane) updatePrevPane() {
 	prevPane = p
 }
 
-func (p *dirPane) updateDirPane(row int, name string) {
-	p.tbl.SetCell(row, 0, tview.NewTableCell(name).
-		SetTextColor(tcell.ColorSkyblue))
+func (p *dirPane) updateDirPane(row int, sel bool, cell *tview.TableCell, name ...string) {
+	var tblcell *tview.TableCell
+
+	color := tcell.ColorSkyblue
+
+	if sel {
+		color = tcell.ColorOrange
+	}
+
+	if cell != nil {
+		tblcell = cell
+	} else {
+		tblcell = tview.NewTableCell(name[0])
+	}
+
+	p.tbl.SetCell(row, 0, tblcell.SetTextColor(color))
+}
+
+func (p *dirPane) resetSelection() {
+	go func() {
+		if !p.getLock() {
+			return
+		}
+		defer p.setUnlock()
+
+		app.QueueUpdateDraw(func() {
+			for i := 0; i < p.tbl.GetRowCount(); i++ {
+				cell := p.tbl.GetCell(i, 0)
+
+				p.updateDirPane(i, false, cell)
+			}
+		})
+	}()
 }
 
 func (p *dirPane) updateRow(lock bool) {
@@ -424,5 +592,5 @@ func stopApp() {
 	showConfirmModal("Do you want to quit?", false, func() {
 		app.Stop()
 		cancelAllOps()
-	})
+	}, func() { app.SetFocus(prevPane.tbl) })
 }
