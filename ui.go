@@ -559,7 +559,7 @@ func (p *dirPane) setPaneOpStatus(pending bool) {
 
 func (p *dirPane) setPaneListStatus(pending bool) {
 	if !pending {
-		p.tbl.SetSelectable(true, false)
+		prevPane.tbl.SetSelectable(true, false)
 		return
 	}
 
