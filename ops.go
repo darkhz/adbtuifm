@@ -14,12 +14,11 @@ var (
 	opPathLock sync.Mutex
 )
 
-func newOpsWork(pane *dirPane, ops opsMode) opsWork {
+func newOpsWork(ops opsMode) opsWork {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return opsWork{
 		id:        jobNum,
-		pane:      pane,
 		ctx:       ctx,
 		cancel:    cancel,
 		ops:       ops,
@@ -34,7 +33,7 @@ func startOpsWork(srcPane, dstPane *dirPane, ops opsMode, srcs []string) {
 	var err error
 
 	tsrcs := len(srcs)
-	op := newOpsWork(dstPane, ops)
+	op := newOpsWork(ops)
 
 	jobList = append(jobList, op)
 

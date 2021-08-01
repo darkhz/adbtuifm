@@ -56,7 +56,6 @@ type opsWork struct {
 	id        int
 	src       string
 	dst       string
-	pane      *dirPane
 	ctx       context.Context
 	cancel    context.CancelFunc
 	ops       opsMode
