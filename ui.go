@@ -28,7 +28,6 @@ func setupUI() {
 	pages.AddPage("ops", setupInfoView(), true, true)
 
 	pages.SwitchToPage("main")
-	app.SetFocus(prevPane.tbl)
 
 	if err := app.SetRoot(pages, true).SetFocus(prevPane.tbl).Run(); err != nil {
 		panic(err)
