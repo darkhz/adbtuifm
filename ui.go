@@ -37,7 +37,7 @@ func setupPaneView() *tview.Flex {
 	selPane := &dirPane{0, semaphore.NewWeighted(1), tview.NewTable(), initMode, initPath, initAPath, initLPath, true, false, nil}
 	auxPane := &dirPane{0, semaphore.NewWeighted(1), tview.NewTable(), initMode, initPath, initAPath, initLPath, true, false, nil}
 
-	prevPane = selPane
+	selPane.updatePrevPane()
 
 	setupPane(selPane, auxPane)
 	setupPane(auxPane, selPane)
@@ -133,7 +133,7 @@ func setupPane(selPane, auxPane *dirPane) {
 		case tcell.KeyEscape:
 			reset(selPane, auxPane)
 		case tcell.KeyTab:
-			selected(selPane, auxPane)
+			pending(selPane, auxPane)
 		case tcell.KeyEnter:
 			selPane.ChangeDir(true, false)
 		case tcell.KeyBackspace, tcell.KeyBackspace2:
@@ -411,7 +411,7 @@ func reset(selPane, auxPane *dirPane) {
 	auxPane.resetSelection()
 }
 
-func selected(selPane, auxPane *dirPane) {
+func pending(selPane, auxPane *dirPane) {
 	if !getOpsLock() && !selstart {
 		selPane.tbl.SetSelectable(false, false)
 		auxPane.tbl.SetSelectable(true, false)
