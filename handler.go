@@ -3,6 +3,8 @@ package main
 import (
 	"path/filepath"
 	"sync"
+
+	"github.com/gdamore/tcell/v2"
 )
 
 var (
@@ -105,6 +107,59 @@ func opsHandler(selPane, auxPane *dirPane, key rune) {
 	showOpConfirm(ops, auxPane, selPane, srcPaths, func() {
 		go startOpsWork(auxPane, selPane, ops, srcPaths)
 	})
+}
+
+func (p *dirPane) multiSelectHandler(all bool) {
+	go func() {
+		if !p.getLock() {
+			return
+		}
+		defer p.setUnlock()
+
+		if getOpsLock() && selstart {
+			return
+		}
+
+		app.QueueUpdateDraw(func() {
+			rows := 1
+			selstart = true
+			p.selected = true
+
+			if all {
+				srcPaths = nil
+				rows = p.tbl.GetRowCount()
+			}
+
+			for i := 0; i < rows; i++ {
+				if !all {
+					i, _ = p.tbl.GetSelection()
+				}
+
+				cell := p.tbl.GetCell(i, 0)
+				if cell.Text == "" {
+					return
+				}
+
+				text := filepath.Join(p.path, cell.Text)
+
+				if checkSelected(text, true) {
+					p.tbl.SetCell(i, 0, cell.SetTextColor(tcell.ColorSkyblue))
+
+					if !all {
+						return
+					}
+
+					continue
+				}
+
+				selLock.Lock()
+				srcPaths = append(srcPaths, text)
+				selLock.Unlock()
+
+				p.tbl.SetCell(i, 0, cell.SetTextColor(tcell.ColorOrange))
+			}
+		})
+	}()
 }
 
 func checkSelected(selpath string, rm bool) bool {

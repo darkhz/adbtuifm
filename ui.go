@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -147,9 +146,9 @@ func setupPane(selPane, auxPane *dirPane) {
 		case 's':
 			modeSwitchHandler(selPane)
 		case 'S':
-			selPane.multiSelect(false)
+			selPane.multiSelectHandler(false)
 		case 'A':
-			selPane.multiSelect(true)
+			selPane.multiSelectHandler(true)
 		case 'r':
 			selPane.ChangeDir(false, false)
 		case 'o':
@@ -418,59 +417,6 @@ func selected(selPane, auxPane *dirPane) {
 		auxPane.tbl.SetSelectable(true, false)
 		app.SetFocus(auxPane.tbl)
 	}
-}
-
-func (p *dirPane) multiSelect(all bool) {
-	go func() {
-		if !p.getLock() {
-			return
-		}
-		defer p.setUnlock()
-
-		if getOpsLock() && selstart {
-			return
-		}
-
-		app.QueueUpdateDraw(func() {
-			rows := 1
-			selstart = true
-			p.selected = true
-
-			if all {
-				srcPaths = nil
-				rows = p.tbl.GetRowCount()
-			}
-
-			for i := 0; i < rows; i++ {
-				if !all {
-					i, _ = p.tbl.GetSelection()
-				}
-
-				cell := p.tbl.GetCell(i, 0)
-				if cell.Text == "" {
-					return
-				}
-
-				text := filepath.Join(p.path, cell.Text)
-
-				if checkSelected(text, true) {
-					p.tbl.SetCell(i, 0, cell.SetTextColor(tcell.ColorSkyblue))
-
-					if !all {
-						return
-					}
-
-					continue
-				}
-
-				selLock.Lock()
-				srcPaths = append(srcPaths, text)
-				selLock.Unlock()
-
-				p.tbl.SetCell(i, 0, cell.SetTextColor(tcell.ColorOrange))
-			}
-		})
-	}()
 }
 
 func (p *dirPane) gotoOpsPage() {
