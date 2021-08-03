@@ -49,6 +49,7 @@ type dirPane struct {
 	apath    string
 	dpath    string
 	hidden   bool
+	selected bool
 	pathList []*adb.DirEntry
 }
 

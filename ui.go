@@ -35,8 +35,8 @@ func setupUI() {
 }
 
 func setupPaneView() *tview.Flex {
-	selPane := &dirPane{0, semaphore.NewWeighted(1), tview.NewTable(), initMode, initPath, initAPath, initLPath, true, nil}
-	auxPane := &dirPane{0, semaphore.NewWeighted(1), tview.NewTable(), initMode, initPath, initAPath, initLPath, true, nil}
+	selPane := &dirPane{0, semaphore.NewWeighted(1), tview.NewTable(), initMode, initPath, initAPath, initLPath, true, false, nil}
+	auxPane := &dirPane{0, semaphore.NewWeighted(1), tview.NewTable(), initMode, initPath, initAPath, initLPath, true, false, nil}
 
 	prevPane = selPane
 
@@ -398,6 +398,9 @@ func reset(selPane, auxPane *dirPane) {
 	srcPaths = nil
 	selstart = false
 
+	selPane.selected = false
+	auxPane.selected = false
+
 	setOpsLock(false)
 	selPane.setPaneOpStatus(false)
 
@@ -431,6 +434,7 @@ func (p *dirPane) multiSelect(all bool) {
 		app.QueueUpdateDraw(func() {
 			rows := 1
 			selstart = true
+			p.selected = true
 
 			if all {
 				srcPaths = nil

@@ -21,7 +21,7 @@ func modeSwitchHandler(pane *dirPane) {
 	}
 	defer pane.setUnlock()
 
-	if selstart {
+	if selstart && pane.selected {
 		return
 	}
 
