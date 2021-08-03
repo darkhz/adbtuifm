@@ -134,9 +134,9 @@ func setupPane(selPane, auxPane *dirPane) {
 			reset(selPane, auxPane)
 		case tcell.KeyTab:
 			pending(selPane, auxPane)
-		case tcell.KeyEnter:
+		case tcell.KeyEnter, tcell.KeyRight:
 			selPane.ChangeDir(true, false)
-		case tcell.KeyBackspace, tcell.KeyBackspace2:
+		case tcell.KeyBackspace, tcell.KeyBackspace2, tcell.KeyLeft:
 			selPane.ChangeDir(false, true)
 		}
 
