@@ -86,6 +86,7 @@ OPSTART:
 
 	op.opLog(opDone, err)
 
+	srcPane.ChangeDir(false, false)
 	dstPane.ChangeDir(false, false)
 }
 
