@@ -17,31 +17,31 @@ var (
 	selLock  sync.Mutex
 )
 
-func modeSwitchHandler(pane *dirPane) {
-	if !pane.getLock() {
+func (p *dirPane) modeSwitchHandler() {
+	if !p.getLock() {
 		return
 	}
-	defer pane.setUnlock()
+	defer p.setUnlock()
 
-	if selstart && pane.selected {
+	if selstart && p.selected {
 		return
 	}
 
-	switch pane.mode {
+	switch p.mode {
 	case mAdb:
-		pane.mode = mLocal
-		pane.apath = pane.path
-		pane.path = pane.dpath
+		p.mode = mLocal
+		p.apath = p.path
+		p.path = p.dpath
 	case mLocal:
 		if !checkAdb() {
 			return
 		}
-		pane.mode = mAdb
-		pane.dpath = pane.path
-		pane.path = pane.apath
+		p.mode = mAdb
+		p.dpath = p.path
+		p.path = p.apath
 	}
 
-	pane.ChangeDir(false, false)
+	p.ChangeDir(false, false)
 }
 
 func opsHandler(selPane, auxPane *dirPane, key rune) {

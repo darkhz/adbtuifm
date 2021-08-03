@@ -144,7 +144,7 @@ func setupPane(selPane, auxPane *dirPane) {
 		case 'm', 'c', 'p', 'd':
 			opsHandler(selPane, auxPane, event.Rune())
 		case 's':
-			modeSwitchHandler(selPane)
+			selPane.modeSwitchHandler()
 		case 'S':
 			selPane.multiSelectHandler(false)
 		case 'A':
