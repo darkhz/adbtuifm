@@ -15,7 +15,8 @@ var (
 	opPathLock sync.Mutex
 )
 
-func newOpsWork(ops opsMode) opsWork {
+func newOpsWork(ops opsMode, srcMode, dstMode ifaceMode) opsWork {
+	transfer := getTransferMode(ops, srcMode, dstMode)
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return opsWork{
@@ -23,7 +24,7 @@ func newOpsWork(ops opsMode) opsWork {
 		ctx:       ctx,
 		cancel:    cancel,
 		ops:       ops,
-		transfer:  localToLocal,
+		transfer:  transfer,
 		finished:  false,
 		currFile:  0,
 		totalFile: 0,
@@ -34,33 +35,10 @@ func startOpsWork(srcPane, dstPane *dirPane, ops opsMode, srcs []string) {
 	var err error
 
 	tsrcs := len(srcs)
-	op := newOpsWork(ops)
+	op := newOpsWork(ops, srcPane.mode, dstPane.mode)
 
 	jobList = append(jobList, op)
 
-	if op.ops == opDelete {
-		switch dstPane.mode {
-		case mAdb:
-			op.transfer = adbToAdb
-		case mLocal:
-			op.transfer = localToLocal
-		}
-
-		goto OPSTART
-	}
-
-	switch {
-	case srcPane.mode == mLocal && dstPane.mode == mAdb:
-		op.transfer = localToAdb
-	case srcPane.mode == mAdb && dstPane.mode == mLocal:
-		op.transfer = adbToLocal
-	case srcPane.mode == mAdb && dstPane.mode == mAdb:
-		op.transfer = adbToAdb
-	case srcPane.mode == mLocal && dstPane.mode == mLocal:
-		op.transfer = localToLocal
-	}
-
-OPSTART:
 	op.opLog(opInProgress, nil)
 
 	for csrc, src := range srcs {
@@ -93,6 +71,30 @@ OPSTART:
 
 	srcPane.ChangeDir(false, false)
 	dstPane.ChangeDir(false, false)
+}
+
+func getTransferMode(ops opsMode, srcMode, dstMode ifaceMode) transferMode {
+	switch ops {
+	case opDelete:
+		switch dstMode {
+		case mAdb:
+			return adbToAdb
+		case mLocal:
+			return localToLocal
+		}
+
+	default:
+		switch {
+		case srcMode == mLocal && dstMode == mAdb:
+			return localToAdb
+		case srcMode == mAdb && dstMode == mLocal:
+			return adbToLocal
+		case srcMode == mAdb && dstMode == mAdb:
+			return adbToAdb
+		}
+	}
+
+	return localToLocal
 }
 
 func checkSamePaths(src, dst string, ops opsMode) error {
