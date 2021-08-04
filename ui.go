@@ -192,10 +192,9 @@ func (p *dirPane) showChangeDirInput() {
 			tmpentry, _ = p.localListDir(current, true)
 		}
 
-		switch {
-		case tmpentry != nil:
+		if tmpentry != nil {
 			entrycache = tmpentry
-		case tmpentry == nil && entrycache != nil:
+		} else {
 			tmpentry = entrycache
 		}
 
