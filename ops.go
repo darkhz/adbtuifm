@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"sync"
 )
@@ -65,6 +66,10 @@ OPSTART:
 	for csrc, src := range srcs {
 		dst := op.updatePathProgress(src, dstPane.getPanePath(), csrc, tsrcs)
 
+		if err = checkSamePaths(src, dst, ops); err != nil {
+			break
+		}
+
 		if err = checkOpPaths(src, dst); err != nil {
 			break
 		}
@@ -90,21 +95,21 @@ OPSTART:
 	dstPane.ChangeDir(false, false)
 }
 
-func removeOpPaths(src, dst string) {
-	opPathLock.Lock()
-	defer opPathLock.Unlock()
-
-	var paths []string
-
-	for _, path := range opPaths {
-		if path == src || path == dst {
-			continue
-		}
-
-		paths = append(paths, path)
+func checkSamePaths(src, dst string, ops opsMode) error {
+	if ops == opDelete {
+		return nil
 	}
 
-	opPaths = paths
+	rel, err := filepath.Rel(src, dst)
+	if err != nil {
+		return err
+	}
+
+	if !strings.HasPrefix(rel, "..") {
+		return fmt.Errorf("Cannot %s on same paths", ops.String())
+	}
+
+	return nil
 }
 
 func checkOpPaths(src, dst string) error {
@@ -125,6 +130,23 @@ func checkOpPaths(src, dst string) error {
 	opPaths = append(opPaths, src)
 
 	return nil
+}
+
+func removeOpPaths(src, dst string) {
+	opPathLock.Lock()
+	defer opPathLock.Unlock()
+
+	var paths []string
+
+	for _, path := range opPaths {
+		if path == src || path == dst {
+			continue
+		}
+
+		paths = append(paths, path)
+	}
+
+	opPaths = paths
 }
 
 func jobFinished(id int) {
