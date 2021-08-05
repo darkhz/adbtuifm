@@ -157,6 +157,8 @@ func setupPane(selPane, auxPane *dirPane) {
 			selPane.setHidden()
 		case 'g':
 			selPane.showChangeDirInput()
+		case '/':
+			selPane.showFilterInput()
 		case 'q':
 			stopApp()
 		}
@@ -168,6 +170,48 @@ func setupPane(selPane, auxPane *dirPane) {
 	selPane.tbl.SetSelectable(true, true)
 
 	selPane.ChangeDir(false, false)
+}
+
+func (p *dirPane) showFilterInput() {
+	input := tview.NewInputField()
+
+	input.SetBorder(true)
+	input.SetTitle("Filter")
+	input.SetTitleAlign(tview.AlignCenter)
+
+	input.SetChangedFunc(func(text string) {
+		if !p.getLock() {
+			return
+		}
+		defer p.setUnlock()
+
+		var row int
+
+		p.tbl.Clear()
+
+		for _, dir := range p.pathList {
+			if strings.Index(strings.ToLower(dir.Name), strings.ToLower(text)) != -1 {
+				p.updateDirPane(row, false, nil, dir.Name)
+				row++
+			}
+		}
+
+		p.tbl.Select(0, 0)
+		p.tbl.ScrollToBeginning()
+	})
+
+	input.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyEscape, tcell.KeyEnter:
+			pages.SwitchToPage("main")
+			app.SetFocus(p.tbl)
+		}
+
+		return event
+	})
+
+	pages.AddAndSwitchToPage("modal", modal(input, 80, 3), true).ShowPage("main")
+	app.SetFocus(input)
 }
 
 func (p *dirPane) showChangeDirInput() {
