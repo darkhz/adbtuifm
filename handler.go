@@ -154,13 +154,15 @@ func (p *dirPane) multiSelectHandler(all bool) {
 		}
 
 		app.QueueUpdateDraw(func() {
-			rows := 1
 			selstart = true
 			p.selected = true
 
+			rows := 1
+			totalrows := p.tbl.GetRowCount()
+
 			if all {
 				multiPaths = nil
-				rows = p.tbl.GetRowCount()
+				rows = totalrows
 			}
 
 			for i := 0; i < rows; i++ {
@@ -190,6 +192,10 @@ func (p *dirPane) multiSelectHandler(all bool) {
 				selLock.Unlock()
 
 				p.tbl.SetCell(i, 0, cell.SetTextColor(tcell.ColorOrange))
+
+				if i+1 < totalrows && !all {
+					p.tbl.Select(i+1, 0)
+				}
 			}
 		})
 	}()
