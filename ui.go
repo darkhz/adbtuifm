@@ -145,10 +145,6 @@ func setupPane(selPane, auxPane *dirPane) {
 			opsHandler(selPane, auxPane, event.Rune())
 		case 's':
 			selPane.modeSwitchHandler()
-		case 'S':
-			selPane.multiSelectHandler(false)
-		case 'A':
-			selPane.multiSelectHandler(true)
 		case 'r':
 			selPane.ChangeDir(false, false)
 		case 'o':
@@ -159,6 +155,10 @@ func setupPane(selPane, auxPane *dirPane) {
 			selPane.showMRInput(selPane, auxPane, event.Rune())
 		case 'g':
 			selPane.showChangeDirInput()
+		case 'A':
+			selPane.multiSelectHandler(true)
+		case ',':
+			selPane.multiSelectHandler(false)
 		case '/':
 			selPane.showFilterInput()
 		case 'q':
