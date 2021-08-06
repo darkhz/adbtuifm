@@ -131,6 +131,7 @@ func checkOpPaths(src, dst string) error {
 	if dst != "" {
 		opPaths = append(opPaths, dst)
 	}
+
 	opPaths = append(opPaths, src)
 
 	return nil
@@ -199,26 +200,14 @@ func showOpConfirm(selPane, auxPane *dirPane, op opsMode, paths, altdst []string
 	}
 
 	resetFunc := func() {
-		app.SetFocus(auxPane.tbl)
+		reset(auxPane, selPane)
 	}
 
 	dstpath := auxPane.getPanePath()
 	msg := fmt.Sprintf("%s selected item(s)", op.String())
 
 	switch op {
-	case opRename:
-		alert = false
-
-		src := paths[0]
-		dst := altdst[0]
-		msg = fmt.Sprintf("%s?\n\n%s to %s", msg, src, dst)
-
-		goto MODAL
-
-	case opMkdir:
-		alert = false
-		msg = fmt.Sprintf("%s?\n\n%s", msg, paths[0])
-
+	case opRename, opMkdir:
 		doFunc()
 		return
 
@@ -231,12 +220,7 @@ func showOpConfirm(selPane, auxPane *dirPane, op opsMode, paths, altdst []string
 		msg = fmt.Sprintf("%s to", msg)
 	}
 
-	resetFunc = func() {
-		reset(auxPane, selPane)
-	}
-
 	msg = fmt.Sprintf("%s %s?\n\n%s", msg, dstpath, strings.Join(paths, "\n"))
 
-MODAL:
 	showConfirmModal(msg, alert, doFunc, resetFunc)
 }
