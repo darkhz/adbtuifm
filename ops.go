@@ -76,7 +76,7 @@ func startOpsWork(srcPane, dstPane *dirPane, ops opsMode, srcs, altdst []string)
 
 func getTransferMode(ops opsMode, srcMode, dstMode ifaceMode) transferMode {
 	switch ops {
-	case opDelete, opRename:
+	case opDelete, opRename, opMkdir:
 		switch dstMode {
 		case mAdb:
 			return adbToAdb
@@ -99,7 +99,8 @@ func getTransferMode(ops opsMode, srcMode, dstMode ifaceMode) transferMode {
 }
 
 func checkSamePaths(src, dst string, ops opsMode) error {
-	if ops == opDelete {
+	switch ops {
+	case opDelete, opMkdir:
 		return nil
 	}
 
@@ -192,7 +193,8 @@ func clearAllOps() {
 
 func showOpConfirm(selPane, auxPane *dirPane, op opsMode, paths, altdst []string, doFunc func()) {
 	var alert bool
-	var resetFunc func()
+
+	resetFunc := func() { app.SetFocus(auxPane.tbl) }
 
 	dstpath := auxPane.getPanePath()
 	msg := fmt.Sprintf("%s selected item(s)", op.String())
@@ -205,9 +207,14 @@ func showOpConfirm(selPane, auxPane *dirPane, op opsMode, paths, altdst []string
 		dst := altdst[0]
 		msg = fmt.Sprintf("%s?\n\n%s to %s", msg, src, dst)
 
-		resetFunc = func() { app.SetFocus(auxPane.tbl) }
-
 		goto MODAL
+
+	case opMkdir:
+		alert = false
+		msg = fmt.Sprintf("%s?\n\n%s", msg, paths[0])
+
+		doFunc()
+		return
 
 	case opDelete:
 		alert = true
@@ -218,9 +225,9 @@ func showOpConfirm(selPane, auxPane *dirPane, op opsMode, paths, altdst []string
 		msg = fmt.Sprintf("%s to", msg)
 	}
 
-	msg = fmt.Sprintf("%s %s?\n\n%s", msg, dstpath, strings.Join(paths, "\n"))
-
 	resetFunc = func() { reset(auxPane, selPane) }
+
+	msg = fmt.Sprintf("%s %s?\n\n%s", msg, dstpath, strings.Join(paths, "\n"))
 
 MODAL:
 	showConfirmModal(msg, alert, doFunc, resetFunc)

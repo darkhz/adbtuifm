@@ -24,6 +24,7 @@ const (
 	opMove
 	opDelete
 	opRename
+	opMkdir
 	opNone
 )
 
@@ -68,7 +69,7 @@ type opsWork struct {
 }
 
 func (op opsMode) String() string {
-	ops := [...]string{"Copy", "Move", "Delete", "Rename"}
+	ops := [...]string{"Copy", "Move", "Delete", "Rename", "Mkdir"}
 
 	return ops[op]
 }

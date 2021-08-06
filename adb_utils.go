@@ -83,31 +83,40 @@ func (o *opsWork) execAdbOps(device *adb.Device) error {
 
 	param := src + dst
 
-	stat, err := device.Stat(o.src)
-	if err != nil {
-		return err
-	}
-
 	switch o.ops {
-	case opMove, opRename:
-		cmd = "mv"
-	case opCopy:
-		if stat.Mode.IsDir() {
-			cmd = "cp -r"
-		} else {
-			cmd = "cp"
-		}
-	case opDelete:
-		if stat.Mode.IsDir() {
-			cmd = "rm -rf"
-		} else {
-			cmd = "rm"
-		}
+	case opMkdir:
+		cmd = "mkdir"
 		param = src
+
+	default:
+		stat, err := device.Stat(o.src)
+		if err != nil {
+			return err
+		}
+
+		switch o.ops {
+		case opMove, opRename:
+			cmd = "mv"
+
+		case opCopy:
+			if stat.Mode.IsDir() {
+				cmd = "cp -r"
+			} else {
+				cmd = "cp"
+			}
+		case opDelete:
+			if stat.Mode.IsDir() {
+				cmd = "rm -rf"
+			} else {
+				cmd = "rm"
+			}
+
+			param = src
+		}
 	}
 
 	cmd = cmd + param
-	_, err = device.RunCommand(cmd)
+	_, err := device.RunCommand(cmd)
 	if err != nil {
 		return err
 	}

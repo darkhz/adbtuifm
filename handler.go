@@ -114,13 +114,24 @@ func opsHandler(selPane, auxPane *dirPane, key rune, altdst ...string) {
 
 		selPane.setPaneOpStatus(false)
 
-	case 'R':
-		selection := selPane.tbl.GetCell(selPane.row, 0).Text
-		srcpath := filepath.Join(selPane.path, selection)
-		altdst[0] = filepath.Join(selPane.path, altdst[0])
-		checkSelected(srcpath, true)
+	case 'M', 'R':
+		var srcpath string
 
-		opstmp = opRename
+		switch key {
+		case 'M':
+			opstmp = opMkdir
+			srcpath = filepath.Join(selPane.path, altdst[0])
+
+		case 'R':
+			opstmp = opRename
+
+			selection := selPane.tbl.GetCell(selPane.row, 0).Text
+			srcpath = filepath.Join(selPane.path, selection)
+			checkSelected(srcpath, true)
+
+			altdst[0] = filepath.Join(selPane.path, altdst[0])
+		}
+
 		srctmp = []string{srcpath}
 	}
 

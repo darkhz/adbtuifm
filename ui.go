@@ -155,8 +155,8 @@ func setupPane(selPane, auxPane *dirPane) {
 			selPane.gotoOpsPage()
 		case 'h':
 			selPane.setHidden()
-		case 'R':
-			selPane.showRenameInput(selPane, auxPane)
+		case 'M', 'R':
+			selPane.showMRInput(selPane, auxPane, event.Rune())
 		case 'g':
 			selPane.showChangeDirInput()
 		case '/':
@@ -174,27 +174,35 @@ func setupPane(selPane, auxPane *dirPane) {
 	selPane.ChangeDir(false, false)
 }
 
-func (p *dirPane) showRenameInput(selPane, auxPane *dirPane) {
+func (p *dirPane) showMRInput(selPane, auxPane *dirPane, mr rune) {
+	var title string
+
+	switch mr {
+	case 'M':
+		title = "Make directory"
+	case 'R':
+		title = "Rename To"
+	}
+
 	input := tview.NewInputField()
 
 	input.SetBorder(true)
-	input.SetTitle("Rename To")
+	input.SetTitle(title)
 	input.SetTitleAlign(tview.AlignCenter)
 
 	input.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
+		case tcell.KeyEnter:
+			text := input.GetText()
+			if text != "" {
+				opsHandler(selPane, auxPane, mr, text)
+			}
+
+			fallthrough
+
 		case tcell.KeyEscape:
 			pages.SwitchToPage("main")
 			app.SetFocus(p.tbl)
-
-		case tcell.KeyEnter:
-			pages.SwitchToPage("main")
-			app.SetFocus(p.tbl)
-
-			text := input.GetText()
-			if text != "" {
-				opsHandler(selPane, auxPane, 'R', text)
-			}
 		}
 
 		return event

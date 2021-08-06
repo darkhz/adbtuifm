@@ -42,7 +42,7 @@ func (o *opsWork) updatePathProgress(src, dst string, altdst []string, count, to
 	dst = filepath.Join(dst, path.Base(src))
 
 	switch o.ops {
-	case opDelete:
+	case opDelete, opMkdir:
 		tpath = src
 	case opRename:
 		dst = altdst[0]

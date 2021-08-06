@@ -36,6 +36,8 @@ func (o *opsWork) localOps(src, dst string) error {
 		err = os.Rename(src, dst)
 	case opDelete:
 		err = os.RemoveAll(src)
+	case opMkdir:
+		err = os.Mkdir(src, 0777)
 	case opCopy:
 		err = o.copyRecursive(src, dst)
 	}
