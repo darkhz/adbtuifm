@@ -89,7 +89,7 @@ func (o *opsWork) execAdbOps(device *adb.Device) error {
 	}
 
 	switch o.ops {
-	case opMove:
+	case opMove, opRename:
 		cmd = "mv"
 	case opCopy:
 		if stat.Mode.IsDir() {

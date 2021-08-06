@@ -31,7 +31,7 @@ func newOpsWork(ops opsMode, srcMode, dstMode ifaceMode) opsWork {
 	}
 }
 
-func startOpsWork(srcPane, dstPane *dirPane, ops opsMode, srcs []string) {
+func startOpsWork(srcPane, dstPane *dirPane, ops opsMode, srcs, altdst []string) {
 	var err error
 
 	tsrcs := len(srcs)
@@ -42,7 +42,8 @@ func startOpsWork(srcPane, dstPane *dirPane, ops opsMode, srcs []string) {
 	op.opLog(opInProgress, nil)
 
 	for csrc, src := range srcs {
-		dst := op.updatePathProgress(src, dstPane.getPanePath(), csrc, tsrcs)
+		path := dstPane.getPanePath()
+		src, dst := op.updatePathProgress(src, path, altdst, csrc, tsrcs)
 
 		if err = checkSamePaths(src, dst, ops); err != nil {
 			break
@@ -75,7 +76,7 @@ func startOpsWork(srcPane, dstPane *dirPane, ops opsMode, srcs []string) {
 
 func getTransferMode(ops opsMode, srcMode, dstMode ifaceMode) transferMode {
 	switch ops {
-	case opDelete:
+	case opDelete, opRename:
 		switch dstMode {
 		case mAdb:
 			return adbToAdb
@@ -189,20 +190,38 @@ func clearAllOps() {
 	setupInfoView()
 }
 
-func showOpConfirm(op opsMode, selPane, auxPane *dirPane, paths []string, doFunc func()) {
-	alert := true
-	dstpath := auxPane.getPanePath()
+func showOpConfirm(selPane, auxPane *dirPane, op opsMode, paths, altdst []string, doFunc func()) {
+	var alert bool
+	var resetFunc func()
 
+	dstpath := auxPane.getPanePath()
 	msg := fmt.Sprintf("%s selected item(s)", op.String())
 
-	if op != opDelete {
+	switch op {
+	case opRename:
+		alert = false
+
+		src := paths[0]
+		dst := altdst[0]
+		msg = fmt.Sprintf("%s?\n\n%s to %s", msg, src, dst)
+
+		resetFunc = func() { app.SetFocus(auxPane.tbl) }
+
+		goto MODAL
+
+	case opDelete:
+		alert = true
+		msg = fmt.Sprintf("%s from", msg)
+
+	default:
 		alert = false
 		msg = fmt.Sprintf("%s to", msg)
-	} else {
-		msg = fmt.Sprintf("%s from", msg)
 	}
 
 	msg = fmt.Sprintf("%s %s?\n\n%s", msg, dstpath, strings.Join(paths, "\n"))
 
-	showConfirmModal(msg, alert, doFunc, func() { reset(auxPane, selPane) })
+	resetFunc = func() { reset(auxPane, selPane) }
+
+MODAL:
+	showConfirmModal(msg, alert, doFunc, resetFunc)
 }

@@ -155,6 +155,8 @@ func setupPane(selPane, auxPane *dirPane) {
 			selPane.gotoOpsPage()
 		case 'h':
 			selPane.setHidden()
+		case 'R':
+			selPane.showRenameInput(selPane, auxPane)
 		case 'g':
 			selPane.showChangeDirInput()
 		case '/':
@@ -170,6 +172,36 @@ func setupPane(selPane, auxPane *dirPane) {
 	selPane.tbl.SetSelectable(true, true)
 
 	selPane.ChangeDir(false, false)
+}
+
+func (p *dirPane) showRenameInput(selPane, auxPane *dirPane) {
+	input := tview.NewInputField()
+
+	input.SetBorder(true)
+	input.SetTitle("Rename To")
+	input.SetTitleAlign(tview.AlignCenter)
+
+	input.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyEscape:
+			pages.SwitchToPage("main")
+			app.SetFocus(p.tbl)
+
+		case tcell.KeyEnter:
+			pages.SwitchToPage("main")
+			app.SetFocus(p.tbl)
+
+			text := input.GetText()
+			if text != "" {
+				opsHandler(selPane, auxPane, 'R', text)
+			}
+		}
+
+		return event
+	})
+
+	pages.AddAndSwitchToPage("modal", modal(input, 80, 3), true).ShowPage("main")
+	app.SetFocus(input)
 }
 
 func (p *dirPane) showFilterInput() {
@@ -343,7 +375,6 @@ func showConfirmModal(msg string, alert bool, dofunc, resetfunc func()) {
 
 	pages.AddAndSwitchToPage("modal", infomodal(view, okbtn, cancelbtn, alert, 50, 10), true).ShowPage("main")
 	app.SetFocus(cancelbtn)
-
 }
 
 func showErrorModal(msg string) {
@@ -437,7 +468,7 @@ func infomodal(p, b, c tview.Primitive, alert bool, width, height int) tview.Pri
 
 func reset(selPane, auxPane *dirPane) {
 	ops = opNone
-	srcPaths = nil
+	multiPaths = nil
 	selstart = false
 
 	selPane.selected = false

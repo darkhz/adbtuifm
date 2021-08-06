@@ -8,13 +8,13 @@ import (
 )
 
 var (
-	ops      opsMode
-	opPaths  []string
-	srcPaths []string
-	opslock  bool
-	selstart bool
-	opsLock  sync.Mutex
-	selLock  sync.Mutex
+	ops        opsMode
+	opPaths    []string
+	multiPaths []string
+	opslock    bool
+	selstart   bool
+	opsLock    sync.Mutex
+	selLock    sync.Mutex
 )
 
 func (p *dirPane) modeSwitchHandler() {
@@ -44,11 +44,14 @@ func (p *dirPane) modeSwitchHandler() {
 	p.ChangeDir(false, false)
 }
 
-func opsHandler(selPane, auxPane *dirPane, key rune) {
+func opsHandler(selPane, auxPane *dirPane, key rune, altdst ...string) {
 	if !selPane.getLock() {
 		return
 	}
 	defer selPane.setUnlock()
+
+	var opstmp opsMode
+	var srctmp []string
 
 	selPane.updateRow(false)
 
@@ -68,14 +71,15 @@ func opsHandler(selPane, auxPane *dirPane, key rune) {
 			}
 
 			srcpath := filepath.Join(selPane.path, selection)
-			srcPaths = append(srcPaths, srcpath)
+			multiPaths = append(multiPaths, srcpath)
 		}
 
-		if key == 'm' {
-			ops = opMove
-		} else if key == 'c' {
+		switch key {
+		case 'c':
 			ops = opCopy
-		} else {
+		case 'm':
+			ops = opMove
+		case 'd':
 			ops = opDelete
 		}
 
@@ -93,6 +97,10 @@ func opsHandler(selPane, auxPane *dirPane, key rune) {
 
 		selPane.tbl.SetSelectable(true, true)
 		auxPane.tbl.SetSelectable(false, false)
+
+		opstmp = ops
+		srctmp = multiPaths
+
 	case 'p':
 		if !getOpsLock() {
 			return
@@ -101,11 +109,27 @@ func opsHandler(selPane, auxPane *dirPane, key rune) {
 		selstart = false
 		setOpsLock(false)
 
+		opstmp = ops
+		srctmp = multiPaths
+
 		selPane.setPaneOpStatus(false)
+
+	case 'R':
+		selection := selPane.tbl.GetCell(selPane.row, 0).Text
+		srcpath := filepath.Join(selPane.path, selection)
+		altdst[0] = filepath.Join(selPane.path, altdst[0])
+		checkSelected(srcpath, true)
+
+		opstmp = opRename
+		srctmp = []string{srcpath}
 	}
 
-	showOpConfirm(ops, auxPane, selPane, srcPaths, func() {
-		go startOpsWork(auxPane, selPane, ops, srcPaths)
+	if altdst == nil {
+		altdst = append(altdst, "")
+	}
+
+	showOpConfirm(auxPane, selPane, opstmp, srctmp, altdst, func() {
+		go startOpsWork(auxPane, selPane, opstmp, srctmp, altdst)
 	})
 }
 
@@ -126,7 +150,7 @@ func (p *dirPane) multiSelectHandler(all bool) {
 			p.selected = true
 
 			if all {
-				srcPaths = nil
+				multiPaths = nil
 				rows = p.tbl.GetRowCount()
 			}
 
@@ -153,7 +177,7 @@ func (p *dirPane) multiSelectHandler(all bool) {
 				}
 
 				selLock.Lock()
-				srcPaths = append(srcPaths, text)
+				multiPaths = append(multiPaths, text)
 				selLock.Unlock()
 
 				p.tbl.SetCell(i, 0, cell.SetTextColor(tcell.ColorOrange))
@@ -170,11 +194,11 @@ func checkSelected(selpath string, rm bool) bool {
 		return false
 	}
 
-	for i, spath := range srcPaths {
+	for i, spath := range multiPaths {
 		if selpath == spath {
 			if rm {
-				srcPaths[i] = srcPaths[len(srcPaths)-1]
-				srcPaths = srcPaths[:len(srcPaths)-1]
+				multiPaths[i] = multiPaths[len(multiPaths)-1]
+				multiPaths = multiPaths[:len(multiPaths)-1]
 			}
 
 			return true

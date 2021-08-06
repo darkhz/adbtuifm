@@ -32,7 +32,7 @@ func (o *opsWork) localOps(src, dst string) error {
 	var err error
 
 	switch o.ops {
-	case opMove:
+	case opMove, opRename:
 		err = os.Rename(src, dst)
 	case opDelete:
 		err = os.RemoveAll(src)

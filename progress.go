@@ -36,11 +36,18 @@ func (o *opsWork) startProgress(curNum int, size int64, pcnt progress.Counter, r
 	o.currFile++
 }
 
-func (o *opsWork) updatePathProgress(src, dst string, count, total int) string {
-	tpath := src
+func (o *opsWork) updatePathProgress(src, dst string, altdst []string, count, total int) (string, string) {
+	var tpath string
+
 	dst = filepath.Join(dst, path.Base(src))
 
-	if o.ops != opDelete {
+	switch o.ops {
+	case opDelete:
+		tpath = src
+	case opRename:
+		dst = altdst[0]
+		fallthrough
+	default:
 		tpath = fmt.Sprintf("%s -> %s", src, dst)
 	}
 
@@ -56,7 +63,7 @@ func (o *opsWork) updatePathProgress(src, dst string, count, total int) string {
 
 	o.updateOpsView(2, tpath)
 
-	return dst
+	return src, dst
 }
 
 func setProgress(status bool) {

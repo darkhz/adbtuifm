@@ -23,6 +23,7 @@ const (
 	opCopy opsMode = iota
 	opMove
 	opDelete
+	opRename
 	opNone
 )
 
@@ -67,7 +68,7 @@ type opsWork struct {
 }
 
 func (op opsMode) String() string {
-	ops := [...]string{"Copy", "Move", "Delete"}
+	ops := [...]string{"Copy", "Move", "Delete", "Rename"}
 
 	return ops[op]
 }
