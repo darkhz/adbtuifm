@@ -467,7 +467,7 @@ func errmodal(p, b tview.Primitive, width, height int) tview.Primitive {
 			AddItem(nil, 0, 1, false), width, 1, false)
 
 	flex.SetBorder(true)
-	flex.SetTitle("| ERROR |")
+	flex.SetTitle("[ ERROR ]")
 
 	return tview.NewFlex().
 		AddItem(nil, 0, 1, false).
@@ -488,7 +488,7 @@ func infomodal(p, b, c tview.Primitive, alert bool, width, height int) tview.Pri
 			AddItem(nil, 0, 1, false), width, 1, false)
 
 	flex.SetBorder(true)
-	flex.SetTitle("| INFO |")
+	flex.SetTitle("[ INFO ]")
 
 	if alert {
 		flex.SetBackgroundColor(tcell.ColorRed)
