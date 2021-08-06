@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -108,7 +109,7 @@ func (p *dirPane) localListDir(testPath string, autocomplete bool) ([]string, bo
 }
 
 func (p *dirPane) doChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
-	var testPath string
+	var testPath, basePath string
 
 	p.updateRow(true)
 
@@ -128,6 +129,7 @@ func (p *dirPane) doChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
 		testPath = trimPath(testPath, false)
 		testPath = path.Join(testPath, p.tbl.GetCell(p.row, 0).Text)
 	} else if cdBack {
+		basePath = fmt.Sprintf("%s/", path.Base(testPath))
 		testPath = trimPath(testPath, cdBack)
 	}
 
@@ -155,9 +157,17 @@ func (p *dirPane) doChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
 	})
 
 	app.QueueUpdateDraw(func() {
+		var pos int
+
 		p.tbl.Clear()
 
 		for row, dir := range p.pathList {
+			if cdBack {
+				if dir.Name == basePath {
+					pos = row
+				}
+			}
+
 			if checkSelected(path.Join(p.path, dir.Name), false) {
 				p.updateDirPane(row, true, nil, dir.Name)
 				continue
@@ -167,7 +177,7 @@ func (p *dirPane) doChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
 		}
 
 		p.setPaneTitle()
-		p.tbl.Select(0, 0)
+		p.tbl.Select(pos, 0)
 		p.tbl.ScrollToBeginning()
 
 		p.setPaneListStatus(false)
