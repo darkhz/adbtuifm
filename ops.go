@@ -122,9 +122,7 @@ func checkOpPaths(src, dst string) error {
 
 	for _, path := range opPaths {
 		if path == src || path == dst {
-			err := fmt.Errorf("Already operating on %s", path)
-			showError(err, false)
-			return err
+			return fmt.Errorf("Already operating on %s", path)
 		}
 	}
 
