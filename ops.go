@@ -191,10 +191,16 @@ func clearAllOps() {
 	setupInfoView()
 }
 
-func showOpConfirm(selPane, auxPane *dirPane, op opsMode, paths, altdst []string, doFunc func()) {
+func showOpConfirm(selPane, auxPane *dirPane, op opsMode, paths, altdst []string) {
 	var alert bool
 
-	resetFunc := func() { app.SetFocus(auxPane.tbl) }
+	doFunc := func() {
+		go startOpsWork(selPane, auxPane, op, paths, altdst)
+	}
+
+	resetFunc := func() {
+		app.SetFocus(auxPane.tbl)
+	}
 
 	dstpath := auxPane.getPanePath()
 	msg := fmt.Sprintf("%s selected item(s)", op.String())
@@ -225,7 +231,9 @@ func showOpConfirm(selPane, auxPane *dirPane, op opsMode, paths, altdst []string
 		msg = fmt.Sprintf("%s to", msg)
 	}
 
-	resetFunc = func() { reset(auxPane, selPane) }
+	resetFunc = func() {
+		reset(auxPane, selPane)
+	}
 
 	msg = fmt.Sprintf("%s %s?\n\n%s", msg, dstpath, strings.Join(paths, "\n"))
 

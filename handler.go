@@ -139,9 +139,7 @@ func opsHandler(selPane, auxPane *dirPane, key rune, altdst ...string) {
 		altdst = append(altdst, "")
 	}
 
-	showOpConfirm(auxPane, selPane, opstmp, srctmp, altdst, func() {
-		go startOpsWork(auxPane, selPane, opstmp, srctmp, altdst)
-	})
+	showOpConfirm(auxPane, selPane, opstmp, srctmp, altdst)
 }
 
 func (p *dirPane) multiSelectHandler(all bool) {
