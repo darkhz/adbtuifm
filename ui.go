@@ -154,12 +154,10 @@ func setupPane(selPane, auxPane *dirPane) {
 			selPane.gotoOpsPage()
 		case 'h':
 			selPane.setHidden()
+		case 'A', ',':
+			selPane.multiSelect(event.Rune())
 		case 'M', 'R':
 			selPane.showMRInput(selPane, auxPane, event.Rune())
-		case 'A':
-			selPane.multiSelectHandler(true)
-		case ',':
-			selPane.multiSelectHandler(false)
 		case '/':
 			selPane.showFilterInput()
 		case 'g':
@@ -176,6 +174,21 @@ func setupPane(selPane, auxPane *dirPane) {
 	selPane.tbl.SetSelectable(true, true)
 
 	selPane.ChangeDir(false, false)
+}
+
+func (p *dirPane) multiSelect(key rune) {
+	totalrows := p.tbl.GetRowCount()
+
+	if totalrows <= 0 {
+		return
+	}
+
+	switch key {
+	case 'A':
+		p.multiSelectHandler(true, totalrows)
+	case ',':
+		p.multiSelectHandler(false, totalrows)
+	}
 }
 
 func (p *dirPane) showMRInput(selPane, auxPane *dirPane, mr rune) {

@@ -142,7 +142,7 @@ func opsHandler(selPane, auxPane *dirPane, key rune, altdst ...string) {
 	showOpConfirm(auxPane, selPane, opstmp, srctmp, altdst)
 }
 
-func (p *dirPane) multiSelectHandler(all bool) {
+func (p *dirPane) multiSelectHandler(all bool, totalrows int) {
 	go func() {
 		if !p.getLock() {
 			return
@@ -158,7 +158,6 @@ func (p *dirPane) multiSelectHandler(all bool) {
 			p.selected = true
 
 			rows := 1
-			totalrows := p.tbl.GetRowCount()
 
 			if all {
 				multiPaths = nil
