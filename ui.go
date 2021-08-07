@@ -136,8 +136,10 @@ func setupPane(selPane, auxPane *dirPane) {
 			pending(selPane, auxPane)
 		case tcell.KeyEnter, tcell.KeyRight:
 			selPane.ChangeDir(true, false)
+			return nil
 		case tcell.KeyBackspace, tcell.KeyBackspace2, tcell.KeyLeft:
 			selPane.ChangeDir(false, true)
+			return nil
 		}
 
 		switch event.Rune() {
@@ -153,14 +155,15 @@ func setupPane(selPane, auxPane *dirPane) {
 			selPane.setHidden()
 		case 'M', 'R':
 			selPane.showMRInput(selPane, auxPane, event.Rune())
-		case 'g':
-			selPane.showChangeDirInput()
 		case 'A':
 			selPane.multiSelectHandler(true)
 		case ',':
 			selPane.multiSelectHandler(false)
 		case '/':
 			selPane.showFilterInput()
+		case 'g':
+			selPane.showChangeDirInput()
+			return nil
 		case 'q':
 			stopApp()
 		}
@@ -295,19 +298,23 @@ func (p *dirPane) showChangeDirInput() {
 		switch event.Key() {
 		case tcell.KeyTab:
 			input.Autocomplete()
+
+		case tcell.KeyEnter:
+			p.ChangeDir(false, false, input.GetText())
+			fallthrough
+
 		case tcell.KeyEscape:
 			pages.SwitchToPage("main")
 			app.SetFocus(p.tbl)
-		case tcell.KeyEnter:
-			pages.SwitchToPage("main")
-			app.SetFocus(p.tbl)
-			p.ChangeDir(false, false, input.GetText())
+
 		case tcell.KeyCtrlW:
 			input.SetText(trimPath(input.GetText(), true))
 			input.Autocomplete()
 			return nil
+
 		case tcell.KeyBackspace, tcell.KeyBackspace2:
 			fallthrough
+
 		case tcell.KeyDown, tcell.KeyUp, tcell.KeyLeft, tcell.KeyRight:
 			return event
 		}

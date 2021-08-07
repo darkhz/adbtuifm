@@ -47,6 +47,10 @@ func (o *opsWork) localOps(src, dst string) error {
 }
 
 func (p *dirPane) isDir(testPath string) bool {
+	if p.row > len(p.pathList) {
+		return false
+	}
+
 	name := p.pathList[p.row].Name
 	fmode := p.pathList[p.row].Mode
 
@@ -110,6 +114,7 @@ func (p *dirPane) localListDir(testPath string, autocomplete bool) ([]string, bo
 
 func (p *dirPane) doChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
 	var testPath, basePath string
+	var listed bool
 
 	p.updateRow(true)
 
@@ -137,12 +142,12 @@ func (p *dirPane) doChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
 
 	switch p.mode {
 	case mAdb:
-		_, cdFwd = p.adbListDir(testPath, false)
+		_, listed = p.adbListDir(testPath, false)
 	case mLocal:
-		_, cdFwd = p.localListDir(filepath.FromSlash(testPath), false)
+		_, listed = p.localListDir(filepath.FromSlash(testPath), false)
 	}
 
-	if !cdFwd {
+	if !listed {
 		return
 	}
 
@@ -156,32 +161,7 @@ func (p *dirPane) doChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
 		return p.pathList[i].Name < p.pathList[j].Name
 	})
 
-	app.QueueUpdateDraw(func() {
-		var pos int
-
-		p.tbl.Clear()
-
-		for row, dir := range p.pathList {
-			if cdBack {
-				if dir.Name == basePath {
-					pos = row
-				}
-			}
-
-			if checkSelected(path.Join(p.path, dir.Name), false) {
-				p.updateDirPane(row, true, nil, dir.Name)
-				continue
-			}
-
-			p.updateDirPane(row, false, nil, dir.Name)
-		}
-
-		p.setPaneTitle()
-		p.tbl.Select(pos, 0)
-		p.tbl.ScrollToBeginning()
-
-		p.setPaneListStatus(false)
-	})
+	p.createDirList(cdFwd, cdBack, basePath)
 }
 
 func (p *dirPane) ChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
@@ -193,6 +173,45 @@ func (p *dirPane) ChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
 
 		p.doChangeDir(cdFwd, cdBack, tpath...)
 	}()
+}
+
+func (p *dirPane) createDirList(cdFwd, cdBack bool, basePath string) {
+	app.QueueUpdateDraw(func() {
+		var pos int
+
+		totalrows := len(p.pathList)
+
+		p.tbl.Clear()
+
+		for row, dir := range p.pathList {
+			if cdBack {
+				if dir.Name == basePath {
+					pos = row
+				}
+			} else if !cdFwd && !cdBack {
+				if p.row >= totalrows {
+					pos = totalrows - 1
+				} else {
+					pos = p.row
+				}
+			}
+
+			if checkSelected(path.Join(p.path, dir.Name), false) {
+				p.updateDirPane(row, true, nil, dir.Name)
+				continue
+			}
+
+			p.updateDirPane(row, false, nil, dir.Name)
+		}
+
+		if pos == 0 {
+			p.tbl.ScrollToBeginning()
+		}
+
+		p.setPaneTitle()
+		p.tbl.Select(pos, 0)
+		p.setPaneListStatus(false)
+	})
 }
 
 func (p *dirPane) updatePanePath(ppath string) {
