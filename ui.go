@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"path"
 	"strconv"
 	"strings"
 
@@ -234,7 +235,12 @@ func (p *dirPane) showFilterInput() {
 
 		for _, dir := range p.pathList {
 			if strings.Index(strings.ToLower(dir.Name), strings.ToLower(text)) != -1 {
-				p.updateDirPane(row, false, nil, dir.Name)
+				if checkSelected(path.Join(p.path, dir.Name), false) {
+					p.updateDirPane(row, true, nil, dir.Name)
+				} else {
+					p.updateDirPane(row, false, nil, dir.Name)
+				}
+
 				row++
 			}
 		}
