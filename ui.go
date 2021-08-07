@@ -406,6 +406,7 @@ func showErrorModal(msg string) {
 		case tcell.KeyEnter:
 			pages.SwitchToPage("main")
 			app.SetFocus(prevPane.tbl)
+			prevPane.tbl.SetSelectable(true, false)
 		case tcell.KeyLeft:
 			app.SetFocus(errview)
 		}
