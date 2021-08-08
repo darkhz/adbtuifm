@@ -121,22 +121,20 @@ func multiSelectHandler(selPane *dirPane, all bool, totalrows int) {
 
 				if checkSelected(text, true) {
 					selPane.tbl.SetCell(i, 0, cell.SetTextColor(tcell.ColorSkyblue))
+				} else {
+					selectLock.Lock()
+					multiPaths = append(multiPaths, selection{text, selPane.mode})
+					selectLock.Unlock()
 
-					if !all {
-						return
-					}
-
-					continue
+					selPane.tbl.SetCell(i, 0, cell.SetTextColor(tcell.ColorOrange))
 				}
-
-				selectLock.Lock()
-				multiPaths = append(multiPaths, selection{text, selPane.mode})
-				selectLock.Unlock()
-
-				selPane.tbl.SetCell(i, 0, cell.SetTextColor(tcell.ColorOrange))
 
 				if i+1 < totalrows && !all {
 					selPane.tbl.Select(i+1, 0)
+				}
+
+				if !all {
+					return
 				}
 			}
 		})
