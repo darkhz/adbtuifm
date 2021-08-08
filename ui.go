@@ -8,6 +8,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	"github.com/sahilm/fuzzy"
 	"golang.org/x/sync/semaphore"
 )
 
@@ -246,19 +247,50 @@ func (p *dirPane) showFilterInput() {
 		}
 		defer p.setUnlock()
 
-		var row int
+		var entries []string
+
+		markselected := func(row int, pathstr string) {
+			if checkSelected(path.Join(p.path, pathstr), false) {
+				p.updateDirPane(row, true, nil, pathstr)
+			} else {
+				p.updateDirPane(row, false, nil, pathstr)
+			}
+		}
+
+		contains := func(needle int, haystack []int) bool {
+			for _, i := range haystack {
+				if needle == i {
+					return true
+				}
+			}
+			return false
+		}
 
 		p.tbl.Clear()
 
-		for _, dir := range p.pathList {
-			if strings.Index(strings.ToLower(dir.Name), strings.ToLower(text)) != -1 {
-				if checkSelected(path.Join(p.path, dir.Name), false) {
-					p.updateDirPane(row, true, nil, dir.Name)
-				} else {
-					p.updateDirPane(row, false, nil, dir.Name)
-				}
+		for row, dir := range p.pathList {
+			if text == "" {
+				markselected(row, dir.Name)
+				continue
+			}
 
-				row++
+			entries = append(entries, dir.Name)
+		}
+
+		if text == "" {
+			p.tbl.Select(0, 0)
+			p.tbl.ScrollToBeginning()
+
+			return
+		}
+
+		matches := fuzzy.Find(text, entries)
+
+		for row, match := range matches {
+			for i := 0; i < len(match.Str); i++ {
+				if contains(i, match.MatchedIndexes) {
+					markselected(row, string(match.Str))
+				}
 			}
 		}
 
