@@ -35,19 +35,19 @@ func getAdb() (*adb.Device, error) {
 	return device, nil
 }
 
-func isSymDir(testPath, name string) bool {
+func isAdbSymDir(testPath, name string) bool {
 	device, err := getAdb()
 	if err != nil {
 		return false
 	}
 
-	cmd := fmt.Sprintf("ls -pd $(readlink -f '%s%s')", testPath, name)
+	cmd := fmt.Sprintf("ls -pd %s%s/", testPath, name)
 	out, err := device.RunCommand(cmd)
 	if err != nil {
 		return false
 	}
 
-	if !strings.HasSuffix(strings.TrimSpace(out), "/") {
+	if !strings.HasSuffix(strings.TrimSpace(out), "//") {
 		return false
 	}
 

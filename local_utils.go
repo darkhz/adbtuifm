@@ -54,11 +54,36 @@ func (p *dirPane) isDir(testPath string) bool {
 	name := p.pathList[p.row].Name
 	fmode := p.pathList[p.row].Mode
 
-	if p.mode == mAdb && fmode&os.ModeSymlink != 0 {
-		return isSymDir(testPath, name)
+	if fmode&os.ModeSymlink != 0 {
+		switch p.mode {
+		case mAdb:
+			return isAdbSymDir(testPath, name)
+		case mLocal:
+			return isLocalSymDir(testPath, name)
+		}
 	}
 
 	if !fmode.IsDir() {
+		return false
+	}
+
+	return true
+}
+
+func isLocalSymDir(testPath, name string) bool {
+	dpath := fmt.Sprintf("%s%s", testPath, name)
+
+	dpath, err := filepath.EvalSymlinks(dpath)
+	if err != nil {
+		return false
+	}
+
+	entry, err := os.Lstat(dpath)
+	if err != nil {
+		return false
+	}
+
+	if !entry.Mode().IsDir() {
 		return false
 	}
 
@@ -92,7 +117,7 @@ func (p *dirPane) localListDir(testPath string, autocomplete bool) ([]string, bo
 			continue
 		}
 
-		if entry.IsDir() {
+		if entry.IsDir() || isLocalSymDir(testPath, name) {
 			dlist = append(dlist, path.Join(testPath, name))
 			name = name + "/"
 		}
