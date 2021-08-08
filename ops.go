@@ -12,11 +12,12 @@ var (
 	jobNum  int
 	jobList []opsWork
 
+	opPaths    []string
 	opPathLock sync.Mutex
 )
 
-func newOpsWork(ops opsMode, srcMode, dstMode ifaceMode) opsWork {
-	transfer := getTransferMode(ops, srcMode, dstMode)
+func newOpsWork(ops opsMode) opsWork {
+	transfer := localToLocal
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return opsWork{
@@ -31,19 +32,19 @@ func newOpsWork(ops opsMode, srcMode, dstMode ifaceMode) opsWork {
 	}
 }
 
-func startOpsWork(srcPane, dstPane *dirPane, ops opsMode, srcs, altdst []string) {
+func startOpsWork(srcPane, dstPane *dirPane, ops opsMode, mselect []selection, altdst []string) {
 	var err error
 
-	tsrcs := len(srcs)
-	op := newOpsWork(ops, srcPane.mode, dstPane.mode)
+	op := newOpsWork(ops)
+	totalmsel := len(mselect)
 
 	jobList = append(jobList, op)
 
 	op.opLog(opInProgress, nil)
 
-	for csrc, src := range srcs {
-		path := dstPane.getPanePath()
-		src, dst := op.updatePathProgress(src, path, altdst, csrc, tsrcs)
+	for sel, msel := range mselect {
+		dpath := dstPane.getPanePath()
+		src, dst := op.updatePathProgress(msel.path, dpath, altdst, sel, totalmsel)
 
 		if err = checkSamePaths(src, dst, ops); err != nil {
 			break
@@ -52,6 +53,8 @@ func startOpsWork(srcPane, dstPane *dirPane, ops opsMode, srcs, altdst []string)
 		if err = checkOpPaths(src, dst); err != nil {
 			break
 		}
+
+		op.transfer = getTransferMode(ops, msel.smode, dstPane.mode)
 
 		switch op.transfer {
 		case localToLocal:
@@ -110,7 +113,7 @@ func checkSamePaths(src, dst string, ops opsMode) error {
 	}
 
 	if !strings.HasPrefix(rel, "..") {
-		return fmt.Errorf("Cannot %s on same paths", ops.String())
+		return fmt.Errorf("Cannot %s on same paths: %s %s", ops.String(), src, dst)
 	}
 
 	return nil
@@ -190,11 +193,12 @@ func clearAllOps() {
 	setupInfoView()
 }
 
-func showOpConfirm(selPane, auxPane *dirPane, op opsMode, paths, altdst []string) {
+func showOpConfirm(selPane, auxPane *dirPane, op opsMode, mselect []selection, altdst []string) {
 	var alert bool
+	var paths []string
 
 	doFunc := func() {
-		go startOpsWork(selPane, auxPane, op, paths, altdst)
+		go startOpsWork(selPane, auxPane, op, mselect, altdst)
 	}
 
 	resetFunc := func() {
@@ -216,6 +220,10 @@ func showOpConfirm(selPane, auxPane *dirPane, op opsMode, paths, altdst []string
 	default:
 		alert = false
 		msg = fmt.Sprintf("%s to", msg)
+	}
+
+	for i := range mselect {
+		paths = append(paths, mselect[i].path)
 	}
 
 	msg = fmt.Sprintf("%s %s?\n\n%s", msg, dstpath, strings.Join(paths, "\n"))

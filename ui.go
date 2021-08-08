@@ -35,8 +35,8 @@ func setupUI() {
 }
 
 func setupPaneView() *tview.Flex {
-	selPane := &dirPane{0, semaphore.NewWeighted(1), tview.NewTable(), initMode, initPath, initAPath, initLPath, true, false, nil}
-	auxPane := &dirPane{0, semaphore.NewWeighted(1), tview.NewTable(), initMode, initPath, initAPath, initLPath, true, false, nil}
+	selPane := &dirPane{0, semaphore.NewWeighted(1), tview.NewTable(), initMode, initPath, initAPath, initLPath, true, nil}
+	auxPane := &dirPane{0, semaphore.NewWeighted(1), tview.NewTable(), initMode, initPath, initAPath, initLPath, true, nil}
 
 	selPane.updatePrevPane()
 
@@ -134,7 +134,7 @@ func setupPane(selPane, auxPane *dirPane) {
 		case tcell.KeyEscape:
 			reset(selPane, auxPane)
 		case tcell.KeyTab:
-			pending(selPane, auxPane)
+			paneswitch(selPane, auxPane)
 		case tcell.KeyEnter, tcell.KeyRight:
 			selPane.ChangeDir(true, false)
 			return nil
@@ -144,8 +144,12 @@ func setupPane(selPane, auxPane *dirPane) {
 		}
 
 		switch event.Rune() {
-		case 'm', 'c', 'p', 'd':
+		case 'm', 'p', 'd':
 			opsHandler(selPane, auxPane, event.Rune())
+		case 'M', 'R':
+			showMRInput(selPane, auxPane, event.Rune())
+		case 'A', ',':
+			multiSelect(selPane, event.Rune())
 		case 's':
 			selPane.modeSwitchHandler()
 		case 'r':
@@ -154,10 +158,6 @@ func setupPane(selPane, auxPane *dirPane) {
 			selPane.gotoOpsPage()
 		case 'h':
 			selPane.setHidden()
-		case 'A', ',':
-			selPane.multiSelect(event.Rune())
-		case 'M', 'R':
-			selPane.showMRInput(selPane, auxPane, event.Rune())
 		case '/':
 			selPane.showFilterInput()
 		case 'g':
@@ -176,22 +176,26 @@ func setupPane(selPane, auxPane *dirPane) {
 	selPane.ChangeDir(false, false)
 }
 
-func (p *dirPane) multiSelect(key rune) {
-	totalrows := p.tbl.GetRowCount()
+func multiSelect(selPane *dirPane, key rune) {
+	var all bool
+
+	switch key {
+	case 'A':
+		all = true
+	case ',':
+		all = false
+	}
+
+	totalrows := selPane.tbl.GetRowCount()
 
 	if totalrows <= 0 {
 		return
 	}
 
-	switch key {
-	case 'A':
-		p.multiSelectHandler(true, totalrows)
-	case ',':
-		p.multiSelectHandler(false, totalrows)
-	}
+	multiSelectHandler(selPane, all, totalrows)
 }
 
-func (p *dirPane) showMRInput(selPane, auxPane *dirPane, mr rune) {
+func showMRInput(selPane, auxPane *dirPane, mr rune) {
 	var title string
 
 	switch mr {
@@ -219,7 +223,7 @@ func (p *dirPane) showMRInput(selPane, auxPane *dirPane, mr rune) {
 
 		case tcell.KeyEscape:
 			pages.SwitchToPage("main")
-			app.SetFocus(p.tbl)
+			app.SetFocus(selPane.tbl)
 		}
 
 		return event
@@ -502,15 +506,8 @@ func infomodal(p, b, c tview.Primitive, alert bool, width, height int) tview.Pri
 }
 
 func reset(selPane, auxPane *dirPane) {
-	ops = opNone
+	selected = false
 	multiPaths = nil
-	selstart = false
-
-	selPane.selected = false
-	auxPane.selected = false
-
-	setOpsLock(false)
-	selPane.setPaneOpStatus(false)
 
 	app.SetFocus(selPane.tbl)
 	selPane.tbl.SetSelectable(true, false)
@@ -520,12 +517,10 @@ func reset(selPane, auxPane *dirPane) {
 	auxPane.resetSelection()
 }
 
-func pending(selPane, auxPane *dirPane) {
-	if !getOpsLock() && !selstart {
-		selPane.tbl.SetSelectable(false, false)
-		auxPane.tbl.SetSelectable(true, false)
-		app.SetFocus(auxPane.tbl)
-	}
+func paneswitch(selPane, auxPane *dirPane) {
+	selPane.tbl.SetSelectable(false, false)
+	auxPane.tbl.SetSelectable(true, false)
+	app.SetFocus(auxPane.tbl)
 }
 
 func (p *dirPane) gotoOpsPage() {
@@ -604,17 +599,6 @@ func (p *dirPane) updateRow(lock bool) {
 		p.row, _ = p.tbl.GetSelection()
 	})
 }
-
-func (p *dirPane) setPaneOpStatus(pending bool) {
-	color := tcell.ColorSteelBlue
-
-	if !pending {
-		color = tcell.ColorWhite
-	}
-
-	p.tbl.SetBorderColor(color)
-}
-
 func (p *dirPane) setPaneListStatus(pending bool) {
 	if !pending {
 		prevPane.tbl.SetSelectable(true, false)

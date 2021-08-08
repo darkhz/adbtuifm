@@ -25,7 +25,6 @@ const (
 	opDelete
 	opRename
 	opMkdir
-	opNone
 )
 
 type ifaceMode int
@@ -42,6 +41,11 @@ const (
 	opDone
 )
 
+type selection struct {
+	path  string
+	smode ifaceMode
+}
+
 type dirPane struct {
 	row      int
 	lock     *semaphore.Weighted
@@ -51,7 +55,6 @@ type dirPane struct {
 	apath    string
 	dpath    string
 	hidden   bool
-	selected bool
 	pathList []*adb.DirEntry
 }
 
