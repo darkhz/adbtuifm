@@ -1,8 +1,8 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"path"
 	"path/filepath"
 	"sync"
 	"time"
@@ -10,23 +10,40 @@ import (
 	"github.com/machinebox/progress"
 )
 
-var resume bool
-var resumeLock sync.Mutex
+var (
+	resume     bool
+	resumeLock sync.Mutex
+)
 
-func (o *opsWork) startProgress(curNum int, size int64, pcnt progress.Counter, recursive bool) {
+func (o *operation) startProgress(curfile, totalfile, selindex int, size int64, pcnt progress.Counter, recursive bool) {
 	go func() {
 		var prog string
 
-		pchan := progress.NewTicker(o.ctx, pcnt, size, 2*time.Second)
+		ctx, cancel := context.WithCancel(context.Background())
+		pchan := progress.NewTicker(ctx, pcnt, size, 2*time.Second)
+
 		for p := range pchan {
-			if !getProgress() {
+			if curfile == totalfile || o.checkSelIndex(selindex) {
+				cancel()
+				return
+			}
+
+			select {
+			case <-o.ctx.Done():
+				cancel()
+				return
+
+			default:
+			}
+
+			if !getResume() {
 				continue
 			}
 
-			if recursive {
-				prog = fmt.Sprintf("File %d (%d%%) of %d", curNum+1, int(p.Percent()), o.totalFile)
-			} else {
+			if !recursive {
 				prog = fmt.Sprintf("%d%%", int(p.Percent()))
+			} else {
+				prog = fmt.Sprintf("File %d (%d%%) of %d", curfile+1, int(p.Percent()), totalfile)
 			}
 
 			o.updateOpsView(3, prog)
@@ -36,44 +53,63 @@ func (o *opsWork) startProgress(curNum int, size int64, pcnt progress.Counter, r
 	o.currFile++
 }
 
-func (o *opsWork) updatePathProgress(src, dst string, altdst []string, sel, totalmsel int) (string, string) {
+func (o *operation) checkSelIndex(selindex int) bool {
+	o.selLock.Lock()
+	defer o.selLock.Unlock()
+
+	if o.selindex > selindex {
+		return true
+	}
+
+	return false
+}
+
+func (o *operation) setSelIndex(selindex int) {
+	o.selLock.Lock()
+	defer o.selLock.Unlock()
+
+	o.selindex = selindex
+}
+
+func (o *operation) setNewProgress(src, dst string, selindex, seltotal int) (string, string) {
 	var tpath string
 
-	dst = filepath.Join(dst, path.Base(src))
+	dst = filepath.Join(dst, filepath.Base(src))
 
-	switch o.ops {
+	switch o.opmode {
 	case opDelete, opMkdir:
 		tpath = src
+
 	case opRename:
-		dst = altdst[0]
+		dst = mrinput
 		fallthrough
+
 	default:
 		tpath = fmt.Sprintf("%s -> %s", src, dst)
 	}
 
-	o.src = src
-	o.dst = dst
-
 	o.currFile = 0
 	o.totalFile = 0
+	o.setSelIndex(selindex)
 
-	if totalmsel > 1 {
-		tpath = fmt.Sprintf("%s (%d of %d)", tpath, sel+1, totalmsel)
+	if seltotal > 1 {
+		tpath = fmt.Sprintf("%s (%d of %d)", tpath, selindex+1, seltotal)
 	}
 
 	o.updateOpsView(2, tpath)
+	o.updateOpsView(3, "Calculating files..")
 
 	return src, dst
 }
 
-func setProgress(status bool) {
+func setResume(status bool) {
 	resumeLock.Lock()
 	defer resumeLock.Unlock()
 
 	resume = status
 }
 
-func getProgress() bool {
+func getResume() bool {
 	resumeLock.Lock()
 	defer resumeLock.Unlock()
 

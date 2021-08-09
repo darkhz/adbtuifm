@@ -15,7 +15,7 @@ import (
 	adb "github.com/zach-klippenstein/goadb"
 )
 
-func (o *opsWork) pullFile(src, dst string, entry *adb.DirEntry, device *adb.Device, recursive bool) error {
+func (o *operation) pullFile(src, dst string, entry *adb.DirEntry, device *adb.Device, recursive bool) error {
 	remote, err := device.OpenRead(src)
 	if err != nil {
 		return err
@@ -31,7 +31,12 @@ func (o *opsWork) pullFile(src, dst string, entry *adb.DirEntry, device *adb.Dev
 	cioOut := contextio.NewWriter(o.ctx, local)
 	prgOut := progress.NewWriter(cioOut)
 
-	o.startProgress(o.currFile, int64(entry.Size), prgOut, recursive)
+	o.startProgress(o.currFile,
+		o.totalFile,
+		o.selindex,
+		int64(entry.Size),
+		prgOut,
+		recursive)
 
 	_, err = io.Copy(prgOut, remote)
 	if err != nil {
@@ -41,16 +46,16 @@ func (o *opsWork) pullFile(src, dst string, entry *adb.DirEntry, device *adb.Dev
 	return nil
 }
 
-func (o *opsWork) pullRecursive(src, dst string, device *adb.Device) error {
+func (o *operation) pullRecursive(src, dst string, device *adb.Device) error {
 	select {
 	case <-o.ctx.Done():
 		return o.ctx.Err()
+
 	default:
 	}
 
-	if o.ops != opCopy {
-		err := fmt.Errorf("%s not implemented via pull", o.ops.String())
-		return err
+	if o.opmode != opCopy {
+		return fmt.Errorf("%s not implemented via pull", o.opmode.String())
 	}
 
 	stat, err := device.Stat(src)
@@ -81,10 +86,6 @@ func (o *opsWork) pullRecursive(src, dst string, device *adb.Device) error {
 			continue
 		}
 
-		if err = o.getTotalFiles(); err != nil {
-			return err
-		}
-
 		if err = o.pullFile(s, d, entry, device, true); err != nil {
 			return err
 		}
@@ -96,7 +97,7 @@ func (o *opsWork) pullRecursive(src, dst string, device *adb.Device) error {
 	return nil
 }
 
-func (o *opsWork) pushFile(src, dst string, entry os.FileInfo, device *adb.Device, recursive bool) error {
+func (o *operation) pushFile(src, dst string, entry os.FileInfo, device *adb.Device, recursive bool) error {
 	var err error
 
 	switch {
@@ -105,6 +106,7 @@ func (o *opsWork) pushFile(src, dst string, entry os.FileInfo, device *adb.Devic
 		if err != nil {
 			return err
 		}
+
 	case entry.Mode()&os.ModeNamedPipe != 0:
 		return nil
 	}
@@ -127,7 +129,12 @@ func (o *opsWork) pushFile(src, dst string, entry os.FileInfo, device *adb.Devic
 	cioIn := contextio.NewReader(o.ctx, local)
 	prgIn := progress.NewReader(cioIn)
 
-	o.startProgress(o.currFile, entry.Size(), prgIn, recursive)
+	o.startProgress(o.currFile,
+		o.totalFile,
+		o.selindex,
+		entry.Size(),
+		prgIn,
+		recursive)
 
 	_, err = io.Copy(remote, prgIn)
 
@@ -138,16 +145,16 @@ func (o *opsWork) pushFile(src, dst string, entry os.FileInfo, device *adb.Devic
 	return nil
 }
 
-func (o *opsWork) pushRecursive(src, dst string, device *adb.Device) error {
+func (o *operation) pushRecursive(src, dst string, device *adb.Device) error {
 	select {
 	case <-o.ctx.Done():
 		return o.ctx.Err()
+
 	default:
 	}
 
-	if o.ops != opCopy {
-		err := fmt.Errorf("%s not implemented via push", o.ops.String())
-		return err
+	if o.opmode != opCopy {
+		return fmt.Errorf("%s not implemented via push", o.opmode.String())
 	}
 
 	stat, err := os.Lstat(src)
@@ -194,10 +201,6 @@ func (o *opsWork) pushRecursive(src, dst string, device *adb.Device) error {
 			continue
 		}
 
-		if err = o.getTotalFiles(); err != nil {
-			return err
-		}
-
 		if err = o.pushFile(s, d, entry, device, true); err != nil {
 			return err
 		}
@@ -206,7 +209,7 @@ func (o *opsWork) pushRecursive(src, dst string, device *adb.Device) error {
 	return nil
 }
 
-func (o *opsWork) copyFile(src, dst string, entry os.FileInfo, recursive bool) error {
+func (o *operation) copyFile(src, dst string, entry os.FileInfo, recursive bool) error {
 	var err error
 
 	switch {
@@ -215,6 +218,7 @@ func (o *opsWork) copyFile(src, dst string, entry os.FileInfo, recursive bool) e
 		if err != nil {
 			return err
 		}
+
 	case entry.Mode()&os.ModeNamedPipe != 0:
 		return syscall.Mkfifo(dst, uint32(entry.Mode()))
 	}
@@ -234,7 +238,12 @@ func (o *opsWork) copyFile(src, dst string, entry os.FileInfo, recursive bool) e
 	cioIn := contextio.NewReader(o.ctx, srcFile)
 	prgIn := progress.NewReader(cioIn)
 
-	o.startProgress(o.currFile, entry.Size(), prgIn, recursive)
+	o.startProgress(o.currFile,
+		o.totalFile,
+		o.selindex,
+		entry.Size(),
+		prgIn,
+		recursive)
 
 	_, err = io.Copy(dstFile, prgIn)
 	if err != nil {
@@ -244,10 +253,11 @@ func (o *opsWork) copyFile(src, dst string, entry os.FileInfo, recursive bool) e
 	return nil
 }
 
-func (o *opsWork) copyRecursive(src, dst string) error {
+func (o *operation) copyRecursive(src, dst string) error {
 	select {
 	case <-o.ctx.Done():
 		return o.ctx.Err()
+
 	default:
 	}
 
@@ -288,10 +298,6 @@ func (o *opsWork) copyRecursive(src, dst string) error {
 			continue
 		}
 
-		if err = o.getTotalFiles(); err != nil {
-			return err
-		}
-
 		if err = o.copyFile(s, d, entry, true); err != nil {
 			return err
 		}
@@ -300,7 +306,7 @@ func (o *opsWork) copyRecursive(src, dst string) error {
 	return nil
 }
 
-func (o *opsWork) getTotalFiles() error {
+func (o *operation) getTotalFiles(src string) error {
 	if o.totalFile > 0 {
 		return nil
 	}
@@ -311,7 +317,7 @@ func (o *opsWork) getTotalFiles() error {
 			return err
 		}
 
-		cmd := fmt.Sprintf("find '%s' -type f | wc -l", o.src)
+		cmd := fmt.Sprintf("find '%s' -type f | wc -l", src)
 		out, err := device.RunCommand(cmd)
 		if err != nil {
 			return err
@@ -325,13 +331,15 @@ func (o *opsWork) getTotalFiles() error {
 		return nil
 	}
 
-	err := filepath.Walk(o.src, func(p string, entry os.FileInfo, err error) error {
+	err := filepath.Walk(src, func(p string, entry os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
+
 		if !entry.IsDir() {
 			o.totalFile++
 		}
+
 		return nil
 	})
 

@@ -19,13 +19,17 @@ var (
 func main() {
 	cmdMode := kingpin.Flag("mode", "Specify which mode to start in, ADB or Local").
 		Default("Local").String()
+
 	cmdAPath := kingpin.Flag("remote", "Specify the remote path to start in").
 		Default("/sdcard").String()
+
 	cmdLPath := kingpin.Flag("local", "Specify the local path to start in").
 		Default("/home").String()
+
 	kingpin.Parse()
 
-	if strings.EqualFold(*cmdMode, "ADB") {
+	switch {
+	case strings.EqualFold(*cmdMode, "ADB"):
 		device, err := getAdb()
 		if err != nil {
 			fmt.Println("adbtuifm: No ADB device or device unauthorized")
@@ -40,7 +44,8 @@ func main() {
 
 		initMode = mAdb
 		initPath = *cmdAPath
-	} else if strings.EqualFold(*cmdMode, "Local") {
+
+	case strings.EqualFold(*cmdMode, "Local"):
 		_, err := os.Stat(*cmdLPath)
 		if err != nil {
 			fmt.Printf("adbtuifm: %s: Invalid Local Path!", *cmdLPath)
@@ -49,7 +54,8 @@ func main() {
 
 		initMode = mLocal
 		initPath, _ = filepath.Abs(*cmdLPath)
-	} else {
+
+	default:
 		fmt.Println("adbtuifm: Invalid Mode!")
 		return
 	}
@@ -59,7 +65,7 @@ func main() {
 
 	jobNum = 0
 	selected = false
-	setProgress(false)
+	setResume(false)
 
 	setupUI()
 }

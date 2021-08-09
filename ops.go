@@ -8,67 +8,117 @@ import (
 	"sync"
 )
 
+type operation struct {
+	id        int
+	currFile  int
+	totalFile int
+	selindex  int
+	finished  bool
+	opmode    opsMode
+	ctx       context.Context
+	cancel    context.CancelFunc
+	transfer  transferMode
+	selLock   sync.Mutex
+}
+
+type ifaceMode int
+
+const (
+	mAdb ifaceMode = iota
+	mLocal
+)
+
+type transferMode int
+
+const (
+	adbToAdb transferMode = iota
+	adbToLocal
+	localToAdb
+	localToLocal
+)
+
+type opsMode int
+
+const (
+	opCopy opsMode = iota
+	opMove
+	opMkdir
+	opRename
+	opDelete
+)
+
+func (m opsMode) String() string {
+	opstr := [...]string{
+		"Copy",
+		"Move",
+		"Mkdir",
+		"Rename",
+		"Delete",
+	}
+
+	return opstr[m]
+}
+
 var (
 	jobNum  int
-	jobList []opsWork
+	jobList []operation
 
 	opPaths    []string
 	opPathLock sync.Mutex
 )
 
-func newOpsWork(ops opsMode) opsWork {
+func newOperation(opmode opsMode) operation {
 	transfer := localToLocal
 	ctx, cancel := context.WithCancel(context.Background())
 
-	return opsWork{
+	return operation{
 		id:        jobNum,
+		opmode:    opmode,
 		ctx:       ctx,
 		cancel:    cancel,
-		ops:       ops,
 		transfer:  transfer,
-		finished:  false,
 		currFile:  0,
 		totalFile: 0,
 	}
 }
 
-func startOpsWork(srcPane, dstPane *dirPane, ops opsMode, mselect []selection, altdst []string) {
+func startOperation(srcPane, dstPane *dirPane, opmode opsMode, mselect []selection) {
 	var err error
 
-	op := newOpsWork(ops)
-	totalmsel := len(mselect)
+	total := len(mselect)
 
+	op := newOperation(opmode)
 	jobList = append(jobList, op)
 
 	op.opLog(opInProgress, nil)
 
 	for sel, msel := range mselect {
-		dpath := dstPane.getPanePath()
-		src, dst := op.updatePathProgress(msel.path, dpath, altdst, sel, totalmsel)
+		dpath := dstPane.getPath()
+		src, dst := op.setNewProgress(msel.path, dpath, sel, total)
 
-		if err = checkSamePaths(src, dst, ops); err != nil {
+		if err = samepath(src, dst, opmode); err != nil {
 			break
 		}
 
-		if err = checkOpPaths(src, dst); err != nil {
+		if err = addopspath(src, dst); err != nil {
 			break
 		}
 
-		op.transfer = getTransferMode(ops, msel.smode, dstPane.mode)
+		op.transfer = transfermode(opmode, msel.smode, dstPane.mode)
 
 		switch op.transfer {
 		case localToLocal:
 			err = op.localOps(src, dst)
+
 		default:
 			err = op.adbOps(src, dst)
 		}
 
+		rmopspath(src, dst)
+
 		if err != nil {
-			removeOpPaths(src, dst)
 			break
 		}
-
-		removeOpPaths(src, dst)
 	}
 
 	op.opLog(opDone, err)
@@ -77,12 +127,13 @@ func startOpsWork(srcPane, dstPane *dirPane, ops opsMode, mselect []selection, a
 	dstPane.ChangeDir(false, false)
 }
 
-func getTransferMode(ops opsMode, srcMode, dstMode ifaceMode) transferMode {
-	switch ops {
+func transfermode(opmode opsMode, srcMode, dstMode ifaceMode) transferMode {
+	switch opmode {
 	case opDelete, opRename, opMkdir:
 		switch dstMode {
 		case mAdb:
 			return adbToAdb
+
 		case mLocal:
 			return localToLocal
 		}
@@ -91,8 +142,10 @@ func getTransferMode(ops opsMode, srcMode, dstMode ifaceMode) transferMode {
 		switch {
 		case srcMode == mLocal && dstMode == mAdb:
 			return localToAdb
+
 		case srcMode == mAdb && dstMode == mLocal:
 			return adbToLocal
+
 		case srcMode == mAdb && dstMode == mAdb:
 			return adbToAdb
 		}
@@ -101,8 +154,8 @@ func getTransferMode(ops opsMode, srcMode, dstMode ifaceMode) transferMode {
 	return localToLocal
 }
 
-func checkSamePaths(src, dst string, ops opsMode) error {
-	switch ops {
+func samepath(src, dst string, opmode opsMode) error {
+	switch opmode {
 	case opDelete, opMkdir:
 		return nil
 	}
@@ -113,13 +166,13 @@ func checkSamePaths(src, dst string, ops opsMode) error {
 	}
 
 	if !strings.HasPrefix(rel, "..") {
-		return fmt.Errorf("Cannot %s on same paths: %s %s", ops.String(), src, dst)
+		return fmt.Errorf("Cannot %s %s to %s", opmode.String(), src, dst)
 	}
 
 	return nil
 }
 
-func checkOpPaths(src, dst string) error {
+func addopspath(src, dst string) error {
 	opPathLock.Lock()
 	defer opPathLock.Unlock()
 
@@ -138,7 +191,7 @@ func checkOpPaths(src, dst string) error {
 	return nil
 }
 
-func removeOpPaths(src, dst string) {
+func rmopspath(src, dst string) {
 	opPathLock.Lock()
 	defer opPathLock.Unlock()
 
@@ -189,26 +242,25 @@ func clearAllOps() {
 	jobNum = 0
 	jobList = nil
 
-	opsView.Clear()
-	setupInfoView()
+	setupOpsView()
 }
 
-func showOpConfirm(selPane, auxPane *dirPane, op opsMode, mselect []selection, altdst []string) {
+func confirmOperation(selPane, auxPane *dirPane, opmode opsMode, mselect []selection) {
 	var alert bool
 	var paths []string
 
 	doFunc := func() {
-		go startOpsWork(selPane, auxPane, op, mselect, altdst)
+		go startOperation(selPane, auxPane, opmode, mselect)
 	}
 
 	resetFunc := func() {
 		reset(auxPane, selPane)
 	}
 
-	dstpath := auxPane.getPanePath()
-	msg := fmt.Sprintf("%s selected item(s)", op.String())
+	dstpath := auxPane.getPath()
+	msg := fmt.Sprintf("%s selected item(s)", opmode.String())
 
-	switch op {
+	switch opmode {
 	case opRename, opMkdir:
 		doFunc()
 		return

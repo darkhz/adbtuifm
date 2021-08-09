@@ -7,11 +7,146 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
+type selection struct {
+	path  string
+	smode ifaceMode
+}
+
 var (
-	selected   bool
-	selectLock sync.Mutex
-	multiPaths []selection
+	selected       bool
+	selectLock     sync.Mutex
+	multiselection []selection
 )
+
+func opsHandler(selPane, auxPane *dirPane, key rune) {
+	if !selPane.getLock() {
+		return
+	}
+	defer selPane.setUnlock()
+
+	var opstmp opsMode
+	var srctmp []selection
+
+	switch key {
+	case 'p', 'm', 'd':
+		if multiselection == nil {
+			return
+		}
+
+		switch key {
+		case 'p':
+			opstmp = opCopy
+
+		case 'm':
+			opstmp = opMove
+
+		case 'd':
+			opstmp = opDelete
+		}
+
+		srctmp = multiselection
+
+	case 'M', 'R':
+		var srcpath string
+
+		switch key {
+		case 'M':
+			opstmp = opMkdir
+			srcpath = filepath.Join(selPane.path, mrinput)
+
+		case 'R':
+			opstmp = opRename
+			selPane.updateRow(false)
+
+			seltext := selPane.table.GetCell(selPane.row, 0).Text
+			srcpath = filepath.Join(selPane.path, seltext)
+			checkSelected(selPane.path, seltext, true)
+
+			mrinput = filepath.Join(selPane.path, mrinput)
+		}
+
+		srctmp = []selection{{srcpath, selPane.mode}}
+	}
+
+	confirmOperation(auxPane, selPane, opstmp, srctmp)
+}
+
+func checkSelected(panepath, dirname string, rm bool) bool {
+	selectLock.Lock()
+	defer selectLock.Unlock()
+
+	if !selected {
+		return false
+	}
+
+	fullpath := filepath.Join(panepath, dirname)
+
+	for i, spath := range multiselection {
+		if spath.path == fullpath {
+			if rm {
+				multiselection[i] = multiselection[len(multiselection)-1]
+				multiselection = multiselection[:len(multiselection)-1]
+			}
+
+			return true
+		}
+	}
+
+	return false
+}
+
+func (p *dirPane) multiSelectHandler(all bool, totalrows int) {
+	if !p.getLock() {
+		return
+	}
+	defer p.setUnlock()
+
+	var rows int
+	var color tcell.Color
+
+	if !all {
+		rows = 1
+	} else {
+		rows = totalrows
+	}
+
+	selected = true
+
+	for i := 0; i < rows; i++ {
+		if !all {
+			i, _ = p.table.GetSelection()
+		}
+
+		cell := p.table.GetCell(i, 0)
+		if cell.Text == "" {
+			return
+		}
+
+		fullpath := filepath.Join(p.path, cell.Text)
+		checksel := checkSelected(p.path, cell.Text, true)
+
+		if checksel && !all {
+			color = tcell.ColorSkyblue
+		} else {
+			color = tcell.ColorOrange
+			msel := selection{fullpath, p.mode}
+
+			selectLock.Lock()
+			multiselection = append(multiselection, msel)
+			selectLock.Unlock()
+		}
+
+		p.table.SetCell(i, 0, cell.SetTextColor(color))
+
+		if i+1 < totalrows && !all {
+			p.table.Select(i+1, 0)
+		}
+
+		if !all {
+			return
+		}
+	}
+}
 
 func (p *dirPane) modeSwitchHandler() {
 	if !p.getLock() {
@@ -24,6 +159,7 @@ func (p *dirPane) modeSwitchHandler() {
 		p.mode = mLocal
 		p.apath = p.path
 		p.path = p.dpath
+
 	case mLocal:
 		if !checkAdb() {
 			return
@@ -34,131 +170,4 @@ func (p *dirPane) modeSwitchHandler() {
 	}
 
 	p.ChangeDir(false, false)
-}
-
-func opsHandler(selPane, auxPane *dirPane, key rune, altdst ...string) {
-	if !selPane.getLock() {
-		return
-	}
-	defer selPane.setUnlock()
-
-	var opstmp opsMode
-	var srctmp []selection
-
-	switch key {
-	case 'p', 'm', 'd':
-		if multiPaths == nil {
-			return
-		}
-
-		switch key {
-		case 'p':
-			opstmp = opCopy
-		case 'm':
-			opstmp = opMove
-		case 'd':
-			opstmp = opDelete
-		}
-
-		srctmp = multiPaths
-
-	case 'M', 'R':
-		if altdst == nil {
-			return
-		}
-
-		var srcpath string
-
-		switch key {
-		case 'M':
-			opstmp = opMkdir
-			srcpath = filepath.Join(selPane.path, altdst[0])
-
-		case 'R':
-			opstmp = opRename
-
-			selPane.updateRow(false)
-			selection := selPane.tbl.GetCell(selPane.row, 0).Text
-			srcpath = filepath.Join(selPane.path, selection)
-			checkSelected(srcpath, true)
-
-			altdst[0] = filepath.Join(selPane.path, altdst[0])
-		}
-
-		srctmp = []selection{{srcpath, selPane.mode}}
-	}
-
-	showOpConfirm(auxPane, selPane, opstmp, srctmp, altdst)
-}
-
-func multiSelectHandler(selPane *dirPane, all bool, totalrows int) {
-	go func() {
-		if !selPane.getLock() {
-			return
-		}
-		defer selPane.setUnlock()
-
-		app.QueueUpdateDraw(func() {
-			rows := 1
-			selected = true
-
-			if all {
-				multiPaths = nil
-				rows = totalrows
-			}
-
-			for i := 0; i < rows; i++ {
-				if !all {
-					i, _ = selPane.tbl.GetSelection()
-				}
-
-				cell := selPane.tbl.GetCell(i, 0)
-				if cell.Text == "" {
-					return
-				}
-
-				text := filepath.Join(selPane.path, cell.Text)
-
-				if checkSelected(text, true) {
-					selPane.tbl.SetCell(i, 0, cell.SetTextColor(tcell.ColorSkyblue))
-				} else {
-					selectLock.Lock()
-					multiPaths = append(multiPaths, selection{text, selPane.mode})
-					selectLock.Unlock()
-
-					selPane.tbl.SetCell(i, 0, cell.SetTextColor(tcell.ColorOrange))
-				}
-
-				if i+1 < totalrows && !all {
-					selPane.tbl.Select(i+1, 0)
-				}
-
-				if !all {
-					return
-				}
-			}
-		})
-	}()
-}
-
-func checkSelected(selpath string, rm bool) bool {
-	selectLock.Lock()
-	defer selectLock.Unlock()
-
-	if !selected {
-		return false
-	}
-
-	for i, spath := range multiPaths {
-		if selpath == spath.path {
-			if rm {
-				multiPaths[i] = multiPaths[len(multiPaths)-1]
-				multiPaths = multiPaths[:len(multiPaths)-1]
-			}
-
-			return true
-		}
-	}
-
-	return false
 }

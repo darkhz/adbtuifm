@@ -8,7 +8,22 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
+type opStatus int
+
+const (
+	opInProgress opStatus = iota
+	opDone
+)
+
 var updateLock = semaphore.NewWeighted(1)
+
+func getUpdateLock() bool {
+	return updateLock.TryAcquire(1)
+}
+
+func setUpdateUnlock() {
+	updateLock.Release(1)
+}
 
 func showError(err error, autocomplete bool) {
 	if autocomplete {
@@ -20,7 +35,7 @@ func showError(err error, autocomplete bool) {
 	})
 }
 
-func (o *opsWork) updateOpsView(col int, msg string) {
+func (o *operation) updateOpsView(col int, msg string) {
 	app.QueueUpdateDraw(func() {
 		if col == 0 {
 			opsView.SetCell(o.id+1, col, tview.NewTableCell(msg).
@@ -34,7 +49,7 @@ func (o *opsWork) updateOpsView(col int, msg string) {
 	})
 }
 
-func (o *opsWork) opLog(status opStatus, err error) {
+func (o *operation) opLog(status opStatus, err error) {
 	for {
 		if getUpdateLock() {
 			break
@@ -47,16 +62,19 @@ func (o *opsWork) opLog(status opStatus, err error) {
 		jobNum++
 
 		o.updateOpsView(0, strconv.Itoa(o.id))
-		o.updateOpsView(1, o.ops.String())
+		o.updateOpsView(1, o.opmode.String())
 		o.updateOpsView(3, "IN PROGRESS")
+
 	case opDone:
 		o.cancel()
 
 		switch err {
 		case nil:
 			o.updateOpsView(3, "[green]DONE")
+
 		case context.Canceled:
 			o.updateOpsView(3, "[red]CANCELED")
+
 		default:
 			o.updateOpsView(3, "[red]ERROR")
 			showError(err, false)
@@ -64,12 +82,4 @@ func (o *opsWork) opLog(status opStatus, err error) {
 
 		jobFinished(o.id)
 	}
-}
-
-func getUpdateLock() bool {
-	return updateLock.TryAcquire(1)
-}
-
-func setUpdateUnlock() {
-	updateLock.Release(1)
 }

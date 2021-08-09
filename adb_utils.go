@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 
 	adb "github.com/zach-klippenstein/goadb"
@@ -54,20 +54,28 @@ func isAdbSymDir(testPath, name string) bool {
 	return true
 }
 
-func (o *opsWork) adbOps(src, dst string) error {
+func (o *operation) adbOps(src, dst string) error {
 	var err error
 
 	device, err := getAdb()
 	if err != nil {
-		showError(err, false)
 		return err
+	}
+
+	if o.opmode != opMkdir {
+		err = o.getTotalFiles(src)
+		if err != nil {
+			return err
+		}
 	}
 
 	switch o.transfer {
 	case adbToAdb:
-		err = o.execAdbOps(device)
+		err = o.execAdbCmd(src, dst, device)
+
 	case localToAdb:
 		err = o.pushRecursive(src, dst, device)
+
 	case adbToLocal:
 		err = o.pullRecursive(src, dst, device)
 	}
@@ -75,26 +83,26 @@ func (o *opsWork) adbOps(src, dst string) error {
 	return err
 }
 
-func (o *opsWork) execAdbOps(device *adb.Device) error {
+func (o *operation) execAdbCmd(src, dst string, device *adb.Device) error {
 	var cmd string
 
-	src := fmt.Sprintf(" '%s'", o.src)
-	dst := fmt.Sprintf(" '%s'", o.dst)
+	srcfmt := fmt.Sprintf(" '%s'", src)
+	dstfmt := fmt.Sprintf(" '%s'", dst)
 
-	param := src + dst
+	param := srcfmt + dstfmt
 
-	switch o.ops {
+	switch o.opmode {
 	case opMkdir:
 		cmd = "mkdir"
 		param = src
 
 	default:
-		stat, err := device.Stat(o.src)
+		stat, err := device.Stat(src)
 		if err != nil {
 			return err
 		}
 
-		switch o.ops {
+		switch o.opmode {
 		case opMove, opRename:
 			cmd = "mv"
 
@@ -111,7 +119,7 @@ func (o *opsWork) execAdbOps(device *adb.Device) error {
 				cmd = "rm"
 			}
 
-			param = src
+			param = srcfmt
 		}
 	}
 
@@ -158,7 +166,7 @@ func (p *dirPane) adbListDir(testPath string, autocomplete bool) ([]string, bool
 		}
 
 		if ent.Mode&os.ModeDir != 0 {
-			dlist = append(dlist, path.Join(testPath, name))
+			dlist = append(dlist, filepath.Join(testPath, name))
 			ent.Name = name + "/"
 		}
 

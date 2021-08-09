@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -16,10 +15,10 @@ import (
 var pathLock sync.Mutex
 
 func trimPath(testPath string, cdBack bool) string {
-	testPath = path.Clean(testPath)
+	testPath = filepath.Clean(testPath)
 
 	if cdBack {
-		testPath = path.Dir(testPath)
+		testPath = filepath.Dir(testPath)
 	}
 
 	if testPath != "/" {
@@ -27,47 +26,6 @@ func trimPath(testPath string, cdBack bool) string {
 	}
 
 	return testPath
-}
-
-func (o *opsWork) localOps(src, dst string) error {
-	var err error
-
-	switch o.ops {
-	case opMove, opRename:
-		err = os.Rename(src, dst)
-	case opDelete:
-		err = os.RemoveAll(src)
-	case opMkdir:
-		err = os.Mkdir(src, 0777)
-	case opCopy:
-		err = o.copyRecursive(src, dst)
-	}
-
-	return err
-}
-
-func (p *dirPane) isDir(testPath string) bool {
-	if p.row > len(p.pathList) {
-		return false
-	}
-
-	name := p.pathList[p.row].Name
-	fmode := p.pathList[p.row].Mode
-
-	if fmode&os.ModeSymlink != 0 {
-		switch p.mode {
-		case mAdb:
-			return isAdbSymDir(testPath, name)
-		case mLocal:
-			return isLocalSymDir(testPath, name)
-		}
-	}
-
-	if !fmode.IsDir() {
-		return false
-	}
-
-	return true
 }
 
 func isLocalSymDir(testPath, name string) bool {
@@ -84,6 +42,31 @@ func isLocalSymDir(testPath, name string) bool {
 	}
 
 	if !entry.Mode().IsDir() {
+		return false
+	}
+
+	return true
+}
+
+func (p *dirPane) isDir(testPath string) bool {
+	if p.row > len(p.pathList) {
+		return false
+	}
+
+	name := p.pathList[p.row].Name
+	fmode := p.pathList[p.row].Mode
+
+	if fmode&os.ModeSymlink != 0 {
+		switch p.mode {
+		case mAdb:
+			return isAdbSymDir(testPath, name)
+
+		case mLocal:
+			return isLocalSymDir(testPath, name)
+		}
+	}
+
+	if !fmode.IsDir() {
 		return false
 	}
 
@@ -118,7 +101,7 @@ func (p *dirPane) localListDir(testPath string, autocomplete bool) ([]string, bo
 		}
 
 		if entry.IsDir() || isLocalSymDir(testPath, name) {
-			dlist = append(dlist, path.Join(testPath, name))
+			dlist = append(dlist, filepath.Join(testPath, name))
 			name = name + "/"
 		}
 
@@ -138,8 +121,8 @@ func (p *dirPane) localListDir(testPath string, autocomplete bool) ([]string, bo
 }
 
 func (p *dirPane) doChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
-	var testPath, basePath string
 	var listed bool
+	var testPath, prevDir string
 
 	p.updateRow(true)
 
@@ -154,20 +137,22 @@ func (p *dirPane) doChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
 	}
 
 	p.pathList = nil
+	p.setPaneSelectable(false)
 
-	if cdFwd {
+	switch {
+	case cdFwd:
 		testPath = trimPath(testPath, false)
-		testPath = path.Join(testPath, p.tbl.GetCell(p.row, 0).Text)
-	} else if cdBack {
-		basePath = fmt.Sprintf("%s/", path.Base(testPath))
+		testPath = filepath.Join(testPath, p.table.GetCell(p.row, 0).Text)
+
+	case cdBack:
+		prevDir = fmt.Sprintf("%s/", filepath.Base(testPath))
 		testPath = trimPath(testPath, cdBack)
 	}
-
-	p.setPaneListStatus(true)
 
 	switch p.mode {
 	case mAdb:
 		_, listed = p.adbListDir(testPath, false)
+
 	case mLocal:
 		_, listed = p.localListDir(filepath.FromSlash(testPath), false)
 	}
@@ -176,7 +161,7 @@ func (p *dirPane) doChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
 		return
 	}
 
-	p.updatePanePath(filepath.ToSlash(testPath))
+	p.setPath(filepath.ToSlash(testPath))
 
 	sort.Slice(p.pathList, func(i, j int) bool {
 		if p.pathList[i].Mode.IsDir() != p.pathList[j].Mode.IsDir() {
@@ -186,7 +171,7 @@ func (p *dirPane) doChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
 		return p.pathList[i].Name < p.pathList[j].Name
 	})
 
-	p.createDirList(cdFwd, cdBack, basePath)
+	p.createDirList(cdFwd, cdBack, prevDir)
 }
 
 func (p *dirPane) ChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
@@ -200,20 +185,22 @@ func (p *dirPane) ChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
 	}()
 }
 
-func (p *dirPane) createDirList(cdFwd, cdBack bool, basePath string) {
+func (p *dirPane) createDirList(cdFwd, cdBack bool, prevDir string) {
 	app.QueueUpdateDraw(func() {
 		var pos int
 
+		p.table.Clear()
+
 		totalrows := len(p.pathList)
 
-		p.tbl.Clear()
-
 		for row, dir := range p.pathList {
-			if cdBack {
-				if dir.Name == basePath {
+			switch {
+			case cdBack:
+				if dir.Name == prevDir {
 					pos = row
 				}
-			} else if !cdFwd && !cdBack {
+
+			case !cdFwd && !cdBack:
 				if p.row >= totalrows {
 					pos = totalrows - 1
 				} else {
@@ -221,7 +208,7 @@ func (p *dirPane) createDirList(cdFwd, cdBack bool, basePath string) {
 				}
 			}
 
-			if checkSelected(path.Join(p.path, dir.Name), false) {
+			if checkSelected(p.path, dir.Name, false) {
 				p.updateDirPane(row, true, nil, dir.Name)
 				continue
 			}
@@ -230,33 +217,52 @@ func (p *dirPane) createDirList(cdFwd, cdBack bool, basePath string) {
 		}
 
 		if pos == 0 {
-			p.tbl.ScrollToBeginning()
+			p.table.ScrollToBeginning()
 		}
 
 		p.setPaneTitle()
-		p.tbl.Select(pos, 0)
-		p.setPaneListStatus(false)
+		p.table.Select(pos, 0)
+		p.setPaneSelectable(true)
 	})
 }
 
-func (p *dirPane) updatePanePath(ppath string) {
+func (p *dirPane) setPath(ppath string) {
 	pathLock.Lock()
 	defer pathLock.Unlock()
 
 	p.path = ppath
 }
 
-func (p *dirPane) getPanePath() string {
+func (p *dirPane) getPath() string {
 	pathLock.Lock()
 	defer pathLock.Unlock()
 
 	return p.path
 }
 
-func (p *dirPane) getLock() bool {
-	return p.lock.TryAcquire(1)
-}
+func (o *operation) localOps(src, dst string) error {
+	var err error
 
-func (p *dirPane) setUnlock() {
-	p.lock.Release(1)
+	if o.opmode != opMkdir {
+		err = o.getTotalFiles(src)
+		if err != nil {
+			return err
+		}
+	}
+
+	switch o.opmode {
+	case opMove, opRename:
+		err = os.Rename(src, dst)
+
+	case opDelete:
+		err = os.RemoveAll(src)
+
+	case opMkdir:
+		err = os.Mkdir(src, 0777)
+
+	case opCopy:
+		err = o.copyRecursive(src, dst)
+	}
+
+	return err
 }
