@@ -187,6 +187,9 @@ func setupPane(selPane, auxPane *dirPane) {
 		case 'q':
 			stopApp()
 
+		case '?':
+			showHelpModal()
+
 		case 'h':
 			selPane.setHidden()
 

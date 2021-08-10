@@ -274,9 +274,9 @@ func showConfirmModal(msg string, alert bool, dofunc, resetfunc func()) {
 }
 
 func showErrorModal(msg string) {
-	errview := tview.NewTextView().
-		SetDynamicColors(true).
-		SetScrollable(true)
+	errview := tview.NewTextView()
+	errview.SetDynamicColors(true)
+	errview.SetScrollable(true)
 
 	okbtn := tview.NewButton("Ok")
 
@@ -312,6 +312,103 @@ func showErrorModal(msg string) {
 	app.SetFocus(okbtn)
 }
 
+func showHelpModal() {
+	helpview := tview.NewTextView()
+	helpview.SetBackgroundColor(tcell.ColorGrey)
+
+	helpview.SetText(`
+	MAIN PAGE
+	=========
+	Operation                     Key
+	---------                     ---
+	Switch between panes          Tab 
+	Navigate between entries      Up/Down
+	CD highlighted entry          Enter/Right
+	Change one directory back     Backspace/Left
+	Switch between ADB/Local      s
+	Switch to operations page     o
+	Change to any directory       g
+	Refresh                       r
+	Move                          m
+	Paste/Put                     p
+	Delete                        d
+	Make directory                M
+	Rename files/folders          R
+	Toggle hidden files           h
+	Select one item               ,
+	Invert selection              a
+	Select all items              A
+	Reset selections              Esc
+	Quit                          q
+
+	OPERATIONS PAGE
+	===============
+	Operation                     Key
+	---------                     ---
+	Navigate between entries      Up/Down
+	Switch to main page           o/Esc
+	Cancel selected operation     x
+	Cancel all operations         X
+	Clear operations list         C
+
+	CHANGE DIRECTORY INPUT
+	======================
+	Operation                     Key
+	---------                     ---
+	Navigate between entries      Up/Down
+	Autocomplete                  Tab/Any key
+	CD to highlighted entry       Enter
+	Move back a directory         Ctrl+W
+	Switch to main page           Esc
+
+	MKDIR/RENAME INPUT
+	==================
+	Operation                     Key
+	---------                     ---
+	Mkdir/Rename                  Enter
+	Switch to main page           Esc
+
+	DIALOG BOXES
+	============
+	Operation                     Key
+	---------                     ---
+	Switch b/w textview, buttons  Left/Right
+	Scroll in textview            Up/Down
+	Select highlighted button     Enter
+	`)
+
+	okbtn := tview.NewButton("Ok")
+	okbtn.SetBackgroundColor(tcell.ColorBlack)
+
+	helpview.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyRight:
+			app.SetFocus(okbtn)
+		}
+
+		return event
+	})
+
+	okbtn.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyLeft:
+			app.SetFocus(helpview)
+
+		case tcell.KeyEnter:
+			pages.SwitchToPage("main")
+			app.SetFocus(prevPane.table)
+			prevPane.table.SetSelectable(true, false)
+		}
+
+		return event
+	})
+
+	help := modal(helpview, okbtn, nil, tcell.ColorGrey, 50, 28)
+	pages.AddAndSwitchToPage("modal", help, true).ShowPage("main")
+
+	app.SetFocus(okbtn)
+}
+
 func field(v tview.Primitive, width, height int) tview.Primitive {
 	return tview.NewGrid().
 		SetColumns(0, width, 0).
@@ -322,9 +419,10 @@ func field(v tview.Primitive, width, height int) tview.Primitive {
 func modal(v, b, c tview.Primitive, color tcell.Color, width, height int) tview.Primitive {
 	var title string
 
-	items := tview.NewFlex().
-		AddItem(nil, 0, 1, false).
-		AddItem(v, height, 1, false)
+	items := tview.NewFlex()
+
+	items.AddItem(nil, 0, 1, false)
+	items.AddItem(v, height, 1, false)
 
 	if c != nil {
 		items.AddItem(c, 1, 1, false)
@@ -334,12 +432,18 @@ func modal(v, b, c tview.Primitive, color tcell.Color, width, height int) tview.
 	items.AddItem(nil, 0, 1, false)
 	items.SetDirection(tview.FlexRow)
 
-	if color != tcell.ColorBlack {
-		title = "[ INFO ]"
-		height = height + 4
-	} else {
+	switch color {
+	case tcell.ColorGrey:
+		title = "[ HELP ]"
+		height = height + 3
+
+	case tcell.ColorBlack:
 		title = "[ ERROR ]"
 		height = height + 3
+
+	default:
+		title = "[ INFO ]"
+		height = height + 4
 	}
 
 	items.SetBorder(true)
