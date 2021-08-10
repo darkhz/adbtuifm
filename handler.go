@@ -68,6 +68,10 @@ func opsHandler(selPane, auxPane *dirPane, key rune) {
 		srctmp = []selection{{srcpath, selPane.mode}}
 	}
 
+	if len(srctmp) == 0 {
+		return
+	}
+
 	confirmOperation(auxPane, selPane, opstmp, srctmp)
 }
 
@@ -95,7 +99,7 @@ func checkSelected(panepath, dirname string, rm bool) bool {
 	return false
 }
 
-func (p *dirPane) multiSelectHandler(all bool, totalrows int) {
+func (p *dirPane) multiSelectHandler(all, inverse bool, totalrows int) {
 	if !p.getLock() {
 		return
 	}
@@ -104,16 +108,19 @@ func (p *dirPane) multiSelectHandler(all bool, totalrows int) {
 	var rows int
 	var color tcell.Color
 
-	if !all {
+	selected = true
+
+	mselone := !all && !inverse
+	mselinv := !all && inverse
+
+	if mselone {
 		rows = 1
 	} else {
 		rows = totalrows
 	}
 
-	selected = true
-
 	for i := 0; i < rows; i++ {
-		if !all {
+		if mselone {
 			i, _ = p.table.GetSelection()
 		}
 
@@ -125,7 +132,7 @@ func (p *dirPane) multiSelectHandler(all bool, totalrows int) {
 		fullpath := filepath.Join(p.path, cell.Text)
 		checksel := checkSelected(p.path, cell.Text, true)
 
-		if checksel && !all {
+		if checksel && (mselone || mselinv) {
 			color = tcell.ColorSkyblue
 		} else {
 			color = tcell.ColorOrange
@@ -138,11 +145,11 @@ func (p *dirPane) multiSelectHandler(all bool, totalrows int) {
 
 		p.table.SetCell(i, 0, cell.SetTextColor(color))
 
-		if i+1 < totalrows && !all {
+		if i+1 < totalrows && mselone {
 			p.table.Select(i+1, 0)
 		}
 
-		if !all {
+		if mselone {
 			return
 		}
 	}

@@ -203,7 +203,7 @@ func setupPane(selPane, auxPane *dirPane) {
 		case 'r':
 			selPane.ChangeDir(false, false)
 
-		case 'A', ',':
+		case 'A', 'a', ',':
 			multiselect(selPane, event.Rune())
 
 		case 'm', 'p', 'd':
@@ -251,14 +251,20 @@ func reset(selPane, auxPane *dirPane) {
 }
 
 func multiselect(selPane *dirPane, key rune) {
-	var all bool
+	var all, inverse bool
 
 	switch key {
 	case 'A':
 		all = true
+		inverse = false
+
+	case 'a':
+		all = false
+		inverse = true
 
 	case ',':
 		all = false
+		inverse = false
 	}
 
 	totalrows := selPane.table.GetRowCount()
@@ -267,7 +273,7 @@ func multiselect(selPane *dirPane, key rune) {
 		return
 	}
 
-	selPane.multiSelectHandler(all, totalrows)
+	selPane.multiSelectHandler(all, inverse, totalrows)
 }
 
 func reselect(selPane, auxPane *dirPane, reset bool) {
