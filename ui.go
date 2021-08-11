@@ -395,5 +395,5 @@ func stopApp() {
 	showConfirmModal("Do you want to quit?", false, func() {
 		app.Stop()
 		cancelAllOps()
-	}, func() { app.SetFocus(prevPane.table) })
+	}, func() {})
 }
