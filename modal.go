@@ -49,7 +49,7 @@ func showMkdirRenameInput(selPane, auxPane *dirPane, key rune) {
 		return event
 	})
 
-	pages.AddAndSwitchToPage("modal", field(input, 80, 3), true).ShowPage("main")
+	pages.AddAndSwitchToPage("modal", field(input, 60, 3), true).ShowPage("main")
 	app.SetFocus(input)
 }
 
@@ -127,7 +127,7 @@ func (p *dirPane) showFilterInput() {
 		return event
 	})
 
-	pages.AddAndSwitchToPage("modal", field(input, 80, 3), true).ShowPage("main")
+	pages.AddAndSwitchToPage("modal", field(input, 60, 3), true).ShowPage("main")
 	app.SetFocus(input)
 }
 
@@ -201,7 +201,7 @@ func (p *dirPane) showChangeDirInput() {
 		return event
 	})
 
-	pages.AddAndSwitchToPage("modal", field(input, 80, 3), true).ShowPage("main")
+	pages.AddAndSwitchToPage("modal", field(input, 60, 3), true).ShowPage("main")
 	app.SetFocus(input)
 }
 
@@ -403,7 +403,7 @@ func showHelpModal() {
 		return event
 	})
 
-	help := modal(helpview, okbtn, nil, tcell.ColorGrey, 50, 28)
+	help := modal(helpview, okbtn, nil, tcell.ColorGrey, 50, 24)
 	pages.AddAndSwitchToPage("modal", help, true).ShowPage("main")
 
 	app.SetFocus(okbtn)
