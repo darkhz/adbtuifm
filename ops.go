@@ -96,11 +96,11 @@ func startOperation(srcPane, dstPane *dirPane, opmode opsMode, mselect []selecti
 		dpath := dstPane.getPath()
 		src, dst := op.setNewProgress(msel.path, dpath, sel, total)
 
-		if err = samepath(src, dst, opmode); err != nil {
+		if err = isSamePath(src, dst, opmode); err != nil {
 			break
 		}
 
-		if err = addopspath(src, dst); err != nil {
+		if err = addOpsPath(src, dst); err != nil {
 			break
 		}
 
@@ -114,7 +114,7 @@ func startOperation(srcPane, dstPane *dirPane, opmode opsMode, mselect []selecti
 			err = op.adbOps(src, dst)
 		}
 
-		rmopspath(src, dst)
+		rmOpsPath(src, dst)
 
 		if err != nil {
 			break
@@ -154,7 +154,7 @@ func transfermode(opmode opsMode, srcMode, dstMode ifaceMode) transferMode {
 	return localToLocal
 }
 
-func samepath(src, dst string, opmode opsMode) error {
+func isSamePath(src, dst string, opmode opsMode) error {
 	switch opmode {
 	case opDelete, opMkdir:
 		return nil
@@ -172,7 +172,7 @@ func samepath(src, dst string, opmode opsMode) error {
 	return nil
 }
 
-func addopspath(src, dst string) error {
+func addOpsPath(src, dst string) error {
 	opPathLock.Lock()
 	defer opPathLock.Unlock()
 
@@ -191,7 +191,7 @@ func addopspath(src, dst string) error {
 	return nil
 }
 
-func rmopspath(src, dst string) {
+func rmOpsPath(src, dst string) {
 	opPathLock.Lock()
 	defer opPathLock.Unlock()
 
