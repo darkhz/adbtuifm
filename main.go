@@ -38,7 +38,7 @@ func main() {
 
 		_, err = device.Stat(*cmdAPath)
 		if err != nil {
-			fmt.Println("adbtuifm: %s: Invalid ADB Path", *cmdAPath)
+			fmt.Printf("adbtuifm: %s: Invalid ADB Path\n", *cmdAPath)
 			return
 		}
 
@@ -48,7 +48,7 @@ func main() {
 	case strings.EqualFold(*cmdMode, "Local"):
 		_, err := os.Stat(*cmdLPath)
 		if err != nil {
-			fmt.Printf("adbtuifm: %s: Invalid Local Path!", *cmdLPath)
+			fmt.Printf("adbtuifm: %s: Invalid Local Path!\n", *cmdLPath)
 			return
 		}
 
