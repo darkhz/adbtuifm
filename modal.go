@@ -83,7 +83,7 @@ func (p *dirPane) showFilterInput() {
 		}
 		defer p.setUnlock()
 
-		var entries []string
+		entries := make([]string, len(p.pathList))
 
 		p.table.Clear()
 
@@ -93,7 +93,7 @@ func (p *dirPane) showFilterInput() {
 				continue
 			}
 
-			entries = append(entries, dir.Name)
+			entries[row] = dir.Name
 		}
 
 		if text == "" {
