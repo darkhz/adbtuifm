@@ -23,10 +23,15 @@ type dirPane struct {
 }
 
 var (
-	app      *tview.Application
-	pages    *tview.Pages
-	opsView  *tview.Table
-	prevPane *dirPane
+	app       *tview.Application
+	pages     *tview.Pages
+	opsView   *tview.Table
+	panes     *tview.Flex
+	wrapPanes *tview.Flex
+	prevPane  *dirPane
+
+	paneToggle   bool
+	layoutToggle bool
 )
 
 func newDirPane() *dirPane {
@@ -63,20 +68,20 @@ func setupPaneView() *tview.Flex {
 	setupPane(selPane, auxPane)
 	setupPane(auxPane, selPane)
 
-	panes := tview.NewFlex().
+	panes = tview.NewFlex().
 		AddItem(selPane.table, 0, 1, true).
 		AddItem(auxPane.table, 0, 1, false).
 		SetDirection(tview.FlexColumn)
 
-	colflex := tview.NewFlex().
+	wrapPanes = tview.NewFlex().
 		AddItem(panes, 0, 2, true).
 		SetDirection(tview.FlexRow)
 
-	rowflex := tview.NewFlex().
-		AddItem(colflex, 0, 2, false)
+	mainflex := tview.NewFlex().
+		AddItem(wrapPanes, 0, 2, false)
 
 	appflex := tview.NewFlex().
-		AddItem(rowflex, 0, 1, true)
+		AddItem(mainflex, 0, 1, true)
 
 	appflex.SetBorder(true)
 	appflex.SetTitle("| ADBTuiFM |")
@@ -182,7 +187,7 @@ func setupPane(selPane, auxPane *dirPane) {
 
 		switch event.Rune() {
 		case 'o':
-			opspage()
+			opsPage()
 
 		case 'q':
 			stopApp()
@@ -206,6 +211,12 @@ func setupPane(selPane, auxPane *dirPane) {
 		case 'r':
 			selPane.ChangeDir(false, false)
 
+		case '[':
+			swapLayout()
+
+		case ']':
+			swapPanes(selPane, auxPane)
+
 		case 'A', 'a', ',':
 			multiselect(selPane, event.Rune())
 
@@ -225,7 +236,7 @@ func setupPane(selPane, auxPane *dirPane) {
 	selPane.ChangeDir(false, false)
 }
 
-func opspage() {
+func opsPage() {
 	setResume(true)
 	app.SetFocus(opsView)
 	pages.SwitchToPage("ops")
@@ -298,6 +309,30 @@ func reselect(selPane, auxPane *dirPane, reset bool) {
 		} else {
 			selPane.updateDirPane(i, false, cell)
 		}
+	}
+}
+
+func swapLayout() {
+	if !layoutToggle {
+		layoutToggle = true
+		panes.SetDirection(tview.FlexRow)
+		wrapPanes.SetDirection(tview.FlexColumn)
+	} else {
+		layoutToggle = false
+		panes.SetDirection(tview.FlexColumn)
+		wrapPanes.SetDirection(tview.FlexRow)
+	}
+}
+
+func swapPanes(selPane, auxPane *dirPane) {
+	if !paneToggle {
+		paneToggle = true
+		panes.RemoveItem(selPane.table)
+		panes.AddItem(selPane.table, 0, 1, true)
+	} else {
+		paneToggle = false
+		panes.RemoveItem(auxPane.table)
+		panes.AddItem(auxPane.table, 0, 1, true)
 	}
 }
 
