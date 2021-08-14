@@ -244,8 +244,8 @@ func opsPage() {
 }
 
 func paneswitch(selPane, auxPane *dirPane) {
+	auxPane.reselect(false)
 	app.SetFocus(auxPane.table)
-	reselect(auxPane, selPane, false)
 	selPane.table.SetSelectable(false, false)
 	auxPane.table.SetSelectable(true, false)
 }
@@ -256,8 +256,8 @@ func reset(selPane, auxPane *dirPane) {
 
 	selPane.table.SetSelectable(false, false)
 
-	reselect(selPane, auxPane, true)
-	reselect(auxPane, selPane, true)
+	selPane.reselect(true)
+	auxPane.reselect(true)
 
 	app.SetFocus(selPane.table)
 	selPane.table.SetSelectable(true, false)
@@ -290,24 +290,24 @@ func multiselect(selPane *dirPane, key rune) {
 	selPane.multiSelectHandler(all, inverse, totalrows)
 }
 
-func reselect(selPane, auxPane *dirPane, reset bool) {
-	if !selPane.getLock() {
+func (p *dirPane) reselect(reset bool) {
+	if !p.getLock() {
 		return
 	}
-	defer selPane.setUnlock()
+	defer p.setUnlock()
 
-	for i := 0; i < selPane.table.GetRowCount(); i++ {
-		cell := selPane.table.GetCell(i, 0)
+	for i := 0; i < p.table.GetRowCount(); i++ {
+		cell := p.table.GetCell(i, 0)
 
 		if reset {
-			selPane.updateDirPane(i, false, cell)
+			p.updateDirPane(i, false, cell)
 			continue
 		}
 
-		if checkSelected(selPane.path, cell.Text, false) {
-			selPane.updateDirPane(i, true, cell)
+		if checkSelected(p.path, cell.Text, false) {
+			p.updateDirPane(i, true, cell)
 		} else {
-			selPane.updateDirPane(i, false, cell)
+			p.updateDirPane(i, false, cell)
 		}
 	}
 }
