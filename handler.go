@@ -29,7 +29,7 @@ func opsHandler(selPane, auxPane *dirPane, key rune) {
 
 	switch key {
 	case 'p', 'm', 'd':
-		if multiselection == nil {
+		if len(multiselection) == 0 {
 			return
 		}
 
