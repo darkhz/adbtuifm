@@ -51,6 +51,8 @@ func (o *operation) startProgress(curfile, totalfile, selindex int, size int64, 
 	}()
 
 	o.currFile++
+
+	time.Sleep(100 * time.Millisecond)
 }
 
 func (o *operation) checkSelIndex(selindex int) bool {
