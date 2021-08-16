@@ -105,7 +105,6 @@ func (p *dirPane) multiSelectHandler(all, inverse bool, totalrows int) {
 	}
 	defer p.setUnlock()
 
-	var rows int
 	var color tcell.Color
 
 	selected = true
@@ -113,13 +112,7 @@ func (p *dirPane) multiSelectHandler(all, inverse bool, totalrows int) {
 	mselone := !all && !inverse
 	mselinv := !all && inverse
 
-	if mselone {
-		rows = 1
-	} else {
-		rows = totalrows
-	}
-
-	for i := 0; i < rows; i++ {
+	for i := 0; i < totalrows; i++ {
 		if mselone {
 			i, _ = p.table.GetSelection()
 		}
