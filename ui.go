@@ -211,6 +211,9 @@ func setupPane(selPane, auxPane *dirPane) {
 		case 'r':
 			selPane.ChangeDir(false, false)
 
+		case 'S':
+			showEditSelections()
+
 		case '[':
 			swapLayout()
 

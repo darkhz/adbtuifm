@@ -375,6 +375,17 @@ func showHelpModal() {
 	Switch b/w textview, buttons  Left/Right
 	Scroll in textview            Up/Down
 	Select highlighted button     Enter
+
+	EDIT SELECTION DIALOG
+	=====================
+	Operation                     Key
+	---------                     ---
+	Select one item               ,
+	Invert selection              a
+	Select all items              A
+	Switch b/w input, list        /, Tab
+	Save edited list              Ctrl+S
+	Cancel editing list           Esc
 	`)
 
 	okbtn := tview.NewButton("Ok")
@@ -407,6 +418,228 @@ func showHelpModal() {
 	pages.AddAndSwitchToPage("modal", help, true).ShowPage("main")
 
 	app.SetFocus(okbtn)
+}
+
+func showEditSelections() {
+	if len(multiselection) == 0 {
+		showErrorModal("Selection list empty")
+		return
+	}
+
+	var focus bool
+	var row, width int
+
+	empty := struct{}{}
+	delpaths := make(map[string]struct{})
+
+	seltable := tview.NewTable()
+
+	input := tview.NewInputField()
+	input.SetLabel("Filter: ")
+
+	flex := tview.NewFlex().
+		AddItem(input, 0, 2, false).
+		AddItem(seltable, 0, 10, false).
+		SetDirection(tview.FlexRow)
+
+	exit := func() {
+		pages.SwitchToPage("main")
+		app.SetFocus(prevPane.table)
+		prevPane.table.SetSelectable(true, false)
+	}
+
+	save := func() {
+		selectLock.Lock()
+		for key, _ := range delpaths {
+			delete(multiselection, key)
+		}
+		selectLock.Unlock()
+
+		prevPane.reselect(false)
+		exit()
+	}
+
+	focustoggle := func() {
+		if !focus {
+			focus = true
+			app.SetFocus(input)
+		} else {
+			focus = false
+			app.SetFocus(seltable)
+		}
+	}
+
+	seltoggle := func(a, i bool) {
+		var color tcell.Color
+
+		totalrows := seltable.GetRowCount()
+
+		one := !a && !i
+		inv := !a && i
+
+		for row := 0; row < totalrows; row++ {
+			if one {
+				row, _ = seltable.GetSelection()
+			}
+
+			cell := seltable.GetCell(row, 0)
+
+			selpath := cell.Text
+
+			_, ok := delpaths[selpath]
+
+			if !ok && (one || inv) {
+				color = tcell.ColorSkyblue
+				delpaths[selpath] = empty
+			} else {
+				color = tcell.ColorOrange
+				delete(delpaths, selpath)
+			}
+
+			seltable.SetCell(row, 0, cell.SetTextColor(color))
+
+			if row+1 < totalrows && one {
+				seltable.Select(row+1, 0)
+			}
+
+			if one {
+				return
+			}
+		}
+	}
+
+	markselected := func(i int, name string) {
+		var color tcell.Color
+
+		_, ok := delpaths[name]
+
+		if !ok {
+			color = tcell.ColorOrange
+		} else {
+			color = tcell.ColorSkyblue
+		}
+
+		seltable.SetCell(i, 0, tview.NewTableCell(name).SetTextColor(color))
+	}
+
+	contains := func(needle int, haystack []int) bool {
+		for _, i := range haystack {
+			if needle == i {
+				return true
+			}
+		}
+		return false
+	}
+
+	input.SetChangedFunc(func(text string) {
+		var selrow int
+
+		entries := make([]string, len(multiselection))
+
+		seltable.Clear()
+
+		selectLock.RLock()
+		for key, _ := range multiselection {
+			if text == "" {
+				markselected(selrow, key)
+				selrow++
+				continue
+			}
+
+			entries[selrow] = key
+			selrow++
+		}
+		selectLock.RUnlock()
+
+		if text == "" {
+			seltable.Select(0, 0)
+			seltable.ScrollToBeginning()
+
+			return
+		}
+
+		matches := fuzzy.Find(text, entries)
+
+		for row, match := range matches {
+			for i := 0; i < len(match.Str); i++ {
+				if contains(i, match.MatchedIndexes) {
+					markselected(row, string(match.Str))
+				}
+			}
+		}
+
+		seltable.Select(0, 0)
+		seltable.ScrollToBeginning()
+	})
+
+	input.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyEscape:
+			exit()
+
+		case tcell.KeyCtrlS:
+			save()
+
+		case tcell.KeyTab:
+			focustoggle()
+			seltable.SetSelectable(true, false)
+		}
+
+		return event
+	})
+
+	seltable.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyEscape:
+			exit()
+
+		case tcell.KeyCtrlS:
+			save()
+
+		case tcell.KeyTab:
+			focustoggle()
+			seltable.SetSelectable(false, false)
+		}
+
+		switch event.Rune() {
+		case ',':
+			seltoggle(false, false)
+
+		case 'a':
+			seltoggle(false, true)
+
+		case 'A':
+			seltoggle(true, false)
+
+		case '/':
+			focustoggle()
+			seltable.SetSelectable(false, false)
+		}
+
+		return event
+	})
+
+	selectLock.RLock()
+	for spath, _ := range multiselection {
+		pathlen := len(spath)
+
+		if pathlen > width {
+			width = pathlen
+		}
+
+		seltable.SetCell(row, 0, tview.NewTableCell(spath).
+			SetTextColor(tcell.ColorOrange))
+
+		row++
+	}
+	selectLock.RUnlock()
+
+	flex.SetBorder(true)
+	seltable.SetSelectable(true, false)
+	flex.SetTitle("[ EDIT SELECTION ]")
+
+	pages.AddAndSwitchToPage("modal", field(flex, width+6, 23), true).ShowPage("main")
+	app.SetFocus(seltable)
 }
 
 func field(v tview.Primitive, width, height int) tview.Primitive {
