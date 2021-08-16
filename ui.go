@@ -252,7 +252,7 @@ func paneswitch(selPane, auxPane *dirPane) {
 
 func reset(selPane, auxPane *dirPane) {
 	selected = false
-	multiselection = nil
+	multiselection = make(map[string]ifaceMode)
 
 	selPane.table.SetSelectable(false, false)
 
