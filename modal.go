@@ -455,7 +455,7 @@ func showEditSelections() {
 		}
 		selectLock.Unlock()
 
-		prevPane.reselect(false)
+		prevPane.reselect(false, true)
 		exit()
 	}
 

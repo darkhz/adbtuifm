@@ -247,7 +247,7 @@ func opsPage() {
 }
 
 func paneswitch(selPane, auxPane *dirPane) {
-	auxPane.reselect(false)
+	auxPane.reselect(false, true)
 	app.SetFocus(auxPane.table)
 	selPane.table.SetSelectable(false, false)
 	auxPane.table.SetSelectable(true, false)
@@ -259,8 +259,7 @@ func reset(selPane, auxPane *dirPane) {
 
 	selPane.table.SetSelectable(false, false)
 
-	selPane.reselect(true)
-	auxPane.reselect(true)
+	selPane.reselect(true, false)
 
 	app.SetFocus(selPane.table)
 	selPane.table.SetSelectable(true, false)
@@ -293,25 +292,37 @@ func multiselect(selPane *dirPane, key rune) {
 	selPane.multiSelectHandler(all, inverse, totalrows)
 }
 
-func (p *dirPane) reselect(reset bool) {
+func (p *dirPane) reselect(reset, psel bool) {
 	if !p.getLock() {
 		return
 	}
 	defer p.setUnlock()
 
-	for i := 0; i < p.table.GetRowCount(); i++ {
-		cell := p.table.GetCell(i, 0)
-
+	selfunc := func(row int, cell *tview.TableCell) {
 		if reset {
-			p.updateDirPane(i, false, cell)
-			continue
+			p.updateDirPane(row, false, cell)
+			return
 		}
 
 		if checkSelected(p.path, cell.Text, false) {
-			p.updateDirPane(i, true, cell)
+			p.updateDirPane(row, true, cell)
 		} else {
-			p.updateDirPane(i, false, cell)
+			p.updateDirPane(row, false, cell)
 		}
+	}
+
+	if psel {
+		for i := 0; i < p.table.GetRowCount(); i++ {
+			cell := p.table.GetCell(i, 0)
+			selfunc(i, cell)
+		}
+
+		return
+	}
+
+	for row, dir := range p.pathList {
+		cell := tview.NewTableCell(dir.Name)
+		selfunc(row, cell)
 	}
 }
 
