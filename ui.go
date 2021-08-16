@@ -176,6 +176,9 @@ func setupPane(selPane, auxPane *dirPane) {
 		case tcell.KeyTab:
 			paneswitch(selPane, auxPane)
 
+		case tcell.KeyCtrlR:
+			selPane.reselect(false, false)
+
 		case tcell.KeyEnter, tcell.KeyRight:
 			selPane.ChangeDir(true, false)
 			return nil
