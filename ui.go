@@ -34,6 +34,8 @@ var (
 	layoutToggle bool
 )
 
+const infocols = 3
+
 func newDirPane() *dirPane {
 	return &dirPane{
 		mode:   initMode,
@@ -177,7 +179,7 @@ func setupPane(selPane, auxPane *dirPane) {
 			paneswitch(selPane, auxPane)
 
 		case tcell.KeyCtrlR:
-			selPane.reselect(false, false)
+			selPane.reselect(false)
 
 		case tcell.KeyEnter, tcell.KeyRight:
 			selPane.ChangeDir(true, false)
@@ -218,7 +220,7 @@ func setupPane(selPane, auxPane *dirPane) {
 			showEditSelections()
 
 		case '[':
-			swapLayout()
+			swapLayout(selPane, auxPane)
 
 		case ']':
 			swapPanes(selPane, auxPane)
@@ -237,7 +239,7 @@ func setupPane(selPane, auxPane *dirPane) {
 	})
 
 	selPane.table.SetBorder(true)
-	selPane.table.SetSelectable(true, true)
+	selPane.table.SetSelectable(true, false)
 
 	selPane.ChangeDir(false, false)
 }
@@ -250,7 +252,7 @@ func opsPage() {
 }
 
 func paneswitch(selPane, auxPane *dirPane) {
-	auxPane.reselect(false, true)
+	auxPane.reselect(true)
 	app.SetFocus(auxPane.table)
 	selPane.table.SetSelectable(false, false)
 	auxPane.table.SetSelectable(true, false)
@@ -261,12 +263,38 @@ func reset(selPane, auxPane *dirPane) {
 	multiselection = make(map[string]ifaceMode)
 
 	selPane.table.SetSelectable(false, false)
-
-	selPane.reselect(true, false)
+	selPane.reselect(false)
 
 	app.SetFocus(selPane.table)
 	selPane.table.SetSelectable(true, false)
 	auxPane.table.SetSelectable(false, false)
+}
+
+func swapLayout(selPane, auxPane *dirPane) {
+	if !layoutToggle {
+		layoutToggle = true
+		panes.SetDirection(tview.FlexRow)
+		wrapPanes.SetDirection(tview.FlexColumn)
+	} else {
+		layoutToggle = false
+		panes.SetDirection(tview.FlexColumn)
+		wrapPanes.SetDirection(tview.FlexRow)
+	}
+
+	selPane.reselect(true)
+	auxPane.reselect(true)
+}
+
+func swapPanes(selPane, auxPane *dirPane) {
+	if !paneToggle {
+		paneToggle = true
+		panes.RemoveItem(selPane.table)
+		panes.AddItem(selPane.table, 0, 1, true)
+	} else {
+		paneToggle = false
+		panes.RemoveItem(auxPane.table)
+		panes.AddItem(auxPane.table, 0, 1, true)
+	}
 }
 
 func multiselect(selPane *dirPane, key rune) {
@@ -295,80 +323,76 @@ func multiselect(selPane *dirPane, key rune) {
 	selPane.multiSelectHandler(all, inverse, totalrows)
 }
 
-func (p *dirPane) reselect(reset, psel bool) {
+func (p *dirPane) reselect(psel bool) {
 	if !p.getLock() {
 		return
 	}
 	defer p.setUnlock()
 
-	selfunc := func(row int, cell *tview.TableCell) {
-		if reset {
-			p.updateDirPane(row, false, cell)
-			return
-		}
-
-		if checkSelected(p.path, cell.Text, false) {
-			p.updateDirPane(row, true, cell)
-		} else {
-			p.updateDirPane(row, false, cell)
-		}
-	}
-
 	if psel {
-		for i := 0; i < p.table.GetRowCount(); i++ {
-			cell := p.table.GetCell(i, 0)
-			selfunc(i, cell)
+		for row := 0; row < p.table.GetRowCount(); row++ {
+			cells := make([]*tview.TableCell, infocols)
+
+			for col := 0; col < infocols; col++ {
+				cells[col] = p.table.GetCell(row, col)
+			}
+
+			checksel := checkSelected(p.path, cells[0].Text, false)
+			p.updateDirPane(row, checksel, cells, nil)
 		}
-
-		return
-	}
-
-	for row, dir := range p.pathList {
-		cell := tview.NewTableCell(dir.Name)
-		selfunc(row, cell)
-	}
-}
-
-func swapLayout() {
-	if !layoutToggle {
-		layoutToggle = true
-		panes.SetDirection(tview.FlexRow)
-		wrapPanes.SetDirection(tview.FlexColumn)
 	} else {
-		layoutToggle = false
-		panes.SetDirection(tview.FlexColumn)
-		wrapPanes.SetDirection(tview.FlexRow)
+		for row, dir := range p.pathList {
+			checksel := checkSelected(p.path, dir.Name, false)
+			p.updateDirPane(row, checksel, nil, dir)
+		}
 	}
+
+	p.table.ScrollToBeginning()
 }
 
-func swapPanes(selPane, auxPane *dirPane) {
-	if !paneToggle {
-		paneToggle = true
-		panes.RemoveItem(selPane.table)
-		panes.AddItem(selPane.table, 0, 1, true)
-	} else {
-		paneToggle = false
-		panes.RemoveItem(auxPane.table)
-		panes.AddItem(auxPane.table, 0, 1, true)
-	}
-}
-
-func (p *dirPane) updateDirPane(row int, sel bool, cell *tview.TableCell, name ...string) {
-	var tablecell *tview.TableCell
-
-	color := tcell.ColorSkyblue
+func (p *dirPane) updateDirPane(row int, sel bool, cells []*tview.TableCell, dir *adb.DirEntry) {
+	var entrycolor, infocolor tcell.Color
 
 	if sel {
-		color = tcell.ColorOrange
-	}
-
-	if cell != nil {
-		tablecell = cell
+		entrycolor = tcell.ColorOrange
 	} else {
-		tablecell = tview.NewTableCell(name[0])
+		entrycolor = tcell.ColorSkyblue
 	}
 
-	p.table.SetCell(row, 0, tablecell.SetTextColor(color))
+	if !layoutToggle {
+		infocolor = tcell.Color16
+	} else {
+		infocolor = entrycolor
+	}
+
+	if cells != nil {
+		for col, cell := range cells {
+			color := entrycolor
+
+			if col > 0 {
+				color = infocolor
+			}
+
+			p.table.SetCell(row, col, cell.SetTextColor(color))
+		}
+	} else {
+		for col, dname := range getListEntry(dir) {
+			color := entrycolor
+			cell := tview.NewTableCell(dname)
+
+			if col > 0 {
+				if col == 1 {
+					cell.SetExpansion(1)
+					cell.SetAlign(tview.AlignRight)
+				}
+
+				color = infocolor
+				cell.SetSelectable(false)
+			}
+
+			p.table.SetCell(row, col, cell.SetTextColor(color))
+		}
+	}
 }
 
 func (p *dirPane) updateRow(lock bool) {

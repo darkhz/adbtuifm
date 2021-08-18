@@ -7,6 +7,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"github.com/sahilm/fuzzy"
+	adb "github.com/zach-klippenstein/goadb"
 )
 
 var (
@@ -60,47 +61,38 @@ func (p *dirPane) showFilterInput() {
 	input.SetTitle("Filter")
 	input.SetTitleAlign(tview.AlignCenter)
 
-	markselected := func(row int, pathstr string) {
-		if checkSelected(p.path, pathstr, false) {
-			p.updateDirPane(row, true, nil, pathstr)
-		} else {
-			p.updateDirPane(row, false, nil, pathstr)
-		}
-	}
-
 	contains := func(needle int, haystack []int) bool {
 		for _, i := range haystack {
 			if needle == i {
 				return true
 			}
 		}
+
 		return false
 	}
 
 	input.SetChangedFunc(func(text string) {
+		if text == "" {
+			p.reselect(false)
+			p.table.Select(0, 0)
+			p.table.ScrollToBeginning()
+
+			return
+		}
+
 		if !p.getLock() {
 			return
 		}
 		defer p.setUnlock()
 
 		entries := make([]string, len(p.pathList))
+		dirpaths := make(map[string]*adb.DirEntry, len(p.pathList))
 
 		p.table.Clear()
 
 		for row, dir := range p.pathList {
-			if text == "" {
-				markselected(row, dir.Name)
-				continue
-			}
-
 			entries[row] = dir.Name
-		}
-
-		if text == "" {
-			p.table.Select(0, 0)
-			p.table.ScrollToBeginning()
-
-			return
+			dirpaths[dir.Name] = dir
 		}
 
 		matches := fuzzy.Find(text, entries)
@@ -108,7 +100,13 @@ func (p *dirPane) showFilterInput() {
 		for row, match := range matches {
 			for i := 0; i < len(match.Str); i++ {
 				if contains(i, match.MatchedIndexes) {
-					markselected(row, string(match.Str))
+					dir, _ := dirpaths[string(match.Str)]
+
+					if checkSelected(p.path, dir.Name, false) {
+						p.updateDirPane(row, true, nil, dir)
+					} else {
+						p.updateDirPane(row, false, nil, dir)
+					}
 				}
 			}
 		}
@@ -450,12 +448,12 @@ func showEditSelections() {
 
 	save := func() {
 		selectLock.Lock()
-		for key, _ := range delpaths {
+		for key := range delpaths {
 			delete(multiselection, key)
 		}
 		selectLock.Unlock()
 
-		prevPane.reselect(false, true)
+		prevPane.reselect(true)
 		exit()
 	}
 
@@ -539,7 +537,7 @@ func showEditSelections() {
 		seltable.Clear()
 
 		selectLock.RLock()
-		for key, _ := range multiselection {
+		for key := range multiselection {
 			if text == "" {
 				markselected(selrow, key)
 				selrow++
@@ -620,7 +618,7 @@ func showEditSelections() {
 	})
 
 	selectLock.RLock()
-	for spath, _ := range multiselection {
+	for spath := range multiselection {
 		pathlen := len(spath)
 
 		if pathlen > width {

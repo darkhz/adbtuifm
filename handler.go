@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/tview"
 )
 
 type selection struct {
@@ -105,8 +105,6 @@ func (p *dirPane) multiSelectHandler(all, inverse bool, totalrows int) {
 	}
 	defer p.setUnlock()
 
-	var color tcell.Color
-
 	selected = true
 
 	mselone := !all && !inverse
@@ -122,17 +120,25 @@ func (p *dirPane) multiSelectHandler(all, inverse bool, totalrows int) {
 			return
 		}
 
+		checksel := false
 		fullpath := filepath.Join(p.path, cell.Text)
-		checksel := checkSelected(p.path, cell.Text, true)
 
-		if checksel && (mselone || mselinv) {
-			color = tcell.ColorSkyblue
-		} else {
-			color = tcell.ColorOrange
+		if mselone || mselinv {
+			checksel = checkSelected(p.path, cell.Text, true)
+		}
+
+		if !checksel {
 			addmsel(fullpath, p.mode)
 		}
 
-		p.table.SetCell(i, 0, cell.SetTextColor(color))
+		cells := make([]*tview.TableCell, infocols)
+
+		cells[0] = cell
+		for col := 1; col < infocols; col++ {
+			cells[col] = p.table.GetCell(i, col)
+		}
+
+		p.updateDirPane(i, !checksel, cells, nil)
 
 		if i+1 < totalrows && mselone {
 			p.table.Select(i+1, 0)

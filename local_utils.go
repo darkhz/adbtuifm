@@ -208,12 +208,9 @@ func (p *dirPane) createDirList(cdFwd, cdBack bool, prevDir string) {
 				}
 			}
 
-			if checkSelected(p.path, dir.Name, false) {
-				p.updateDirPane(row, true, nil, dir.Name)
-				continue
-			}
+			sel := checkSelected(p.path, dir.Name, false)
 
-			p.updateDirPane(row, false, nil, dir.Name)
+			p.updateDirPane(row, sel, nil, dir)
 		}
 
 		if pos == 0 {
@@ -265,4 +262,14 @@ func (o *operation) localOps(src, dst string) error {
 	}
 
 	return err
+}
+
+func getListEntry(dir *adb.DirEntry) []string {
+	entry := []string{
+		dir.Name,
+		dir.Mode.Perm().String(),
+		dir.ModifiedAt.Format("02 Jan 2006 03:04 PM"),
+	}
+
+	return entry
 }
