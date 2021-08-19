@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/gdamore/tcell/v2"
 	adb "github.com/zach-klippenstein/goadb"
 )
 
@@ -272,4 +273,45 @@ func getListEntry(dir *adb.DirEntry) []string {
 	}
 
 	return entry
+}
+
+func setEntryColor(col int, sel bool, perms string) tcell.Color {
+	if col > 0 {
+		switch {
+		case !layoutToggle:
+			return tcell.Color16
+
+		case sel:
+			return tcell.ColorOrange
+		}
+
+		return tcell.ColorGrey
+	}
+
+	if sel {
+		return tcell.ColorOrange
+	}
+
+	if perms == "-rwxr-xr-x" {
+		return tcell.Color82
+	}
+
+	switch perms[0] {
+	case 'l':
+		return tcell.ColorAqua
+
+	case 'd':
+		return tcell.ColorBlue
+
+	case 'c':
+		return tcell.ColorYellow
+
+	case 's':
+		return tcell.ColorViolet
+
+	case 'u', 't':
+		return tcell.ColorRed
+	}
+
+	return tcell.ColorWhite
 }
