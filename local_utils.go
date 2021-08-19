@@ -264,9 +264,15 @@ func (o *operation) localOps(src, dst string) error {
 }
 
 func getListEntry(dir *adb.DirEntry) []string {
+	perms := strings.ToLower(dir.Mode.String())
+
+	if len(perms) > 10 {
+		perms = perms[1:]
+	}
+
 	entry := []string{
 		dir.Name,
-		dir.Mode.Perm().String(),
+		perms,
 		dir.ModifiedAt.Format("02 Jan 2006 03:04 PM"),
 	}
 
