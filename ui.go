@@ -19,6 +19,7 @@ type dirPane struct {
 	mode     ifaceMode
 	table    *tview.Table
 	plock    *semaphore.Weighted
+	entry    *adb.DirEntry
 	pathList []*adb.DirEntry
 }
 
@@ -357,6 +358,7 @@ func (p *dirPane) updateDirPane(row int, sel bool, cells []*tview.TableCell, dir
 			color := setEntryColor(col, sel, entry[1])
 
 			cell := tview.NewTableCell(dname)
+			cell.SetReference(dir)
 
 			if col > 0 {
 				if col == 1 {
@@ -372,14 +374,24 @@ func (p *dirPane) updateDirPane(row int, sel bool, cells []*tview.TableCell, dir
 	}
 }
 
-func (p *dirPane) updateRow(lock bool) {
-	if !lock {
+func (p *dirPane) updateRef(lock bool) {
+	update := func() {
 		p.row, _ = p.table.GetSelection()
+
+		ref := p.table.GetCell(p.row, 0).GetReference()
+
+		if ref != nil {
+			p.entry = ref.(*adb.DirEntry)
+		}
+	}
+
+	if !lock {
+		update()
 		return
 	}
 
 	app.QueueUpdateDraw(func() {
-		p.row, _ = p.table.GetSelection()
+		update()
 	})
 }
 

@@ -50,14 +50,14 @@ func isLocalSymDir(testPath, name string) bool {
 }
 
 func (p *dirPane) isDir(testPath string) bool {
-	if p.row > len(p.pathList) {
+	if p.entry == nil {
 		return false
 	}
 
-	name := p.pathList[p.row].Name
-	fmode := p.pathList[p.row].Mode
+	name := p.entry.Name
+	mode := p.entry.Mode
 
-	if fmode&os.ModeSymlink != 0 {
+	if mode&os.ModeSymlink != 0 {
 		switch p.mode {
 		case mAdb:
 			return isAdbSymDir(testPath, name)
@@ -67,7 +67,7 @@ func (p *dirPane) isDir(testPath string) bool {
 		}
 	}
 
-	if !fmode.IsDir() {
+	if !mode.IsDir() {
 		return false
 	}
 
@@ -125,7 +125,7 @@ func (p *dirPane) doChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
 	var listed bool
 	var testPath, prevDir string
 
-	p.updateRow(true)
+	p.updateRef(true)
 
 	if tpath != nil {
 		testPath = tpath[0]
@@ -143,7 +143,7 @@ func (p *dirPane) doChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
 	switch {
 	case cdFwd:
 		testPath = trimPath(testPath, false)
-		testPath = filepath.Join(testPath, p.table.GetCell(p.row, 0).Text)
+		testPath = filepath.Join(testPath, p.entry.Name)
 
 	case cdBack:
 		prevDir = fmt.Sprintf("%s/", filepath.Base(testPath))

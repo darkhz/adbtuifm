@@ -56,11 +56,10 @@ func opsHandler(selPane, auxPane *dirPane, key rune) {
 
 		case 'R':
 			opstmp = opRename
-			selPane.updateRow(false)
+			selPane.updateRef(false)
 
-			seltext := selPane.table.GetCell(selPane.row, 0).Text
-			srcpath = filepath.Join(selPane.path, seltext)
-			checkSelected(selPane.path, seltext, true)
+			srcpath = filepath.Join(selPane.path, selPane.entry.Name)
+			checkSelected(selPane.path, selPane.entry.Name, true)
 
 			mrinput = filepath.Join(selPane.path, mrinput)
 		}
