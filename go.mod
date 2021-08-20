@@ -8,9 +8,9 @@ require (
 	github.com/dolmen-go/contextio v0.0.0-20210803191544-7a4579021851
 	github.com/gdamore/tcell/v2 v2.4.0
 	github.com/machinebox/progress v0.2.0
+	github.com/matryer/is v1.4.0 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/rivo/tview v0.0.0-20210624165335-29d673af0ce2
-	github.com/sahilm/fuzzy v0.1.0
 	github.com/zach-klippenstein/goadb v0.0.0-20201208042340-620e0e950ed7
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/sys v0.0.0-20210809222454-d867a43fc93e // indirect

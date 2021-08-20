@@ -2,7 +2,7 @@ project_name: adbtuifm
 
 builds:
   - env:
-      - CGO_ENABLED=0
+      - CGO_ENABLED=0 GOPROXY=https://proxy.golang.org GO111MODULE=on
     goos:
       - linux
       - darwin
