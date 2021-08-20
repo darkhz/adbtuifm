@@ -6,8 +6,6 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
-	"github.com/sahilm/fuzzy"
-	adb "github.com/zach-klippenstein/goadb"
 )
 
 var (
@@ -61,16 +59,6 @@ func (p *dirPane) showFilterInput() {
 	input.SetTitle("Filter")
 	input.SetTitleAlign(tview.AlignCenter)
 
-	contains := func(needle int, haystack []int) bool {
-		for _, i := range haystack {
-			if needle == i {
-				return true
-			}
-		}
-
-		return false
-	}
-
 	input.SetChangedFunc(func(text string) {
 		if text == "" {
 			p.reselect(false)
@@ -85,29 +73,18 @@ func (p *dirPane) showFilterInput() {
 		}
 		defer p.setUnlock()
 
-		entries := make([]string, len(p.pathList))
-		dirpaths := make(map[string]*adb.DirEntry, len(p.pathList))
-
 		p.table.Clear()
 
-		for row, dir := range p.pathList {
-			entries[row] = dir.Name
-			dirpaths[dir.Name] = dir
-		}
+		var row int
+		for _, dir := range p.pathList {
+			if strings.Contains(
+				strings.ToLower(dir.Name),
+				strings.ToLower(text),
+			) {
+				sel := checkSelected(p.path, dir.Name, false)
 
-		matches := fuzzy.Find(text, entries)
-
-		for row, match := range matches {
-			for i := 0; i < len(match.Str); i++ {
-				if contains(i, match.MatchedIndexes) {
-					dir, _ := dirpaths[string(match.Str)]
-
-					if checkSelected(p.path, dir.Name, false) {
-						p.updateDirPane(row, true, nil, dir)
-					} else {
-						p.updateDirPane(row, false, nil, dir)
-					}
-				}
+				p.updateDirPane(row, sel, nil, dir)
+				row++
 			}
 		}
 
@@ -434,7 +411,7 @@ func showEditSelections() {
 	var row, width int
 
 	empty := struct{}{}
-	delpaths := make(map[string]struct{})
+	delpaths := make(map[string]struct{}, len(multiselection))
 
 	seltable := tview.NewTable()
 
@@ -458,6 +435,8 @@ func showEditSelections() {
 			delete(multiselection, key)
 		}
 		selectLock.Unlock()
+
+		delpaths = nil
 
 		prevPane.reselect(true)
 		exit()
@@ -526,49 +505,30 @@ func showEditSelections() {
 		seltable.SetCell(i, 0, tview.NewTableCell(name).SetTextColor(color))
 	}
 
-	contains := func(needle int, haystack []int) bool {
-		for _, i := range haystack {
-			if needle == i {
-				return true
-			}
-		}
-		return false
-	}
-
 	input.SetChangedFunc(func(text string) {
-		var selrow int
-
-		entries := make([]string, len(multiselection))
-
-		seltable.Clear()
-
-		selectLock.RLock()
-		for key := range multiselection {
-			if text == "" {
-				markselected(selrow, key)
-				selrow++
-				continue
-			}
-
-			entries[selrow] = key
-			selrow++
-		}
-		selectLock.RUnlock()
+		row := 0
 
 		if text == "" {
+			for dpath := range multiselection {
+				markselected(row, dpath)
+				row++
+			}
+
 			seltable.Select(0, 0)
 			seltable.ScrollToBeginning()
 
 			return
 		}
 
-		matches := fuzzy.Find(text, entries)
+		seltable.Clear()
 
-		for row, match := range matches {
-			for i := 0; i < len(match.Str); i++ {
-				if contains(i, match.MatchedIndexes) {
-					markselected(row, string(match.Str))
-				}
+		for dpath := range multiselection {
+			if strings.Contains(
+				strings.ToLower(dpath),
+				strings.ToLower(text),
+			) {
+				markselected(row, dpath)
+				row++
 			}
 		}
 
@@ -638,8 +598,13 @@ func showEditSelections() {
 	}
 	selectLock.RUnlock()
 
-	flex.SetBorder(true)
+	if width < 50 {
+		width = 50
+	}
+
 	seltable.SetSelectable(true, false)
+
+	flex.SetBorder(true)
 	flex.SetTitle("[ EDIT SELECTION ]")
 
 	pages.AddAndSwitchToPage("modal", field(flex, width+6, 23), true).ShowPage("main")
