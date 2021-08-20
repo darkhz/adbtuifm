@@ -382,6 +382,8 @@ func (p *dirPane) updateRef(lock bool) {
 
 		if ref != nil {
 			p.entry = ref.(*adb.DirEntry)
+		} else {
+			p.entry = nil
 		}
 	}
 

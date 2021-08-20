@@ -135,7 +135,7 @@ func (p *dirPane) doChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
 		testPath = p.path
 	}
 
-	if cdFwd && p.pathList != nil && !p.isDir(testPath) {
+	if cdFwd && (p.entry == nil || !p.isDir(testPath)) {
 		return
 	}
 
