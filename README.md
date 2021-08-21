@@ -39,7 +39,8 @@ Flags:
 
 # Keybindings
 **Note:**<br />
-**- As of v0.2.0, keybindings have been revised.**<br />
+**- As of v0.3.0, keybindings have been revised.**<br />
+**- More information about an entry will be shown only in the top-down layout**<br />
 **- Only Copy operations are cancellable, Move and Delete operations will persist**
 
 ## Main Page
@@ -49,18 +50,23 @@ Flags:
 |Navigate between entries               |<kbd>Up</kbd>/<kbd>Down</kbd>       |
 |Change directory to highlighted entry  |<kbd>Enter</kbd>/<kbd>Right</kbd>   |
 |Change one directory back              |<kbd>Backspace</kbd>/<kbd>Left</kbd>|
-|Switch between ADB/Local (in each pane)|<kbd>s</kbd>                        |
 |Switch to operations page              |<kbd>o</kbd>                        |
-|Change to any directory                |<kbd>g</kbd>                        |
+|Switch between ADB/Local (in each pane)|<kbd>s</kbd>/<kbd><</kbd>           |
+|Change to any directory                |<kbd>g</kbd>/<kbd>></kbd>           |
+|Toggle hidden files                    |<kbd>h</kbd>/<kbd>.</kbd>           |
 |Refresh                                |<kbd>r</kbd>                        |
 |Move                                   |<kbd>m</kbd>                        |
 |Paste/Put                              |<kbd>p</kbd>                        |
 |Delete                                 |<kbd>d</kbd>                        |
-|Toggle hidden files                    |<kbd>h</kbd>                        |
+|Filter entries                         |<kbd>/</kbd>                        |
+|Clear filtered entries                 |<kbd>Ctrl+r</kbd>                   |
 |Select one item                        |<kbd>,</kbd>                        |
 |Inverse selection                      |<kbd>a</kbd>                        |
 |Select all items                       |<kbd>A</kbd>                        |
+|Edit selection list                    |<kbd>S</kbd>                        |
 |Make directory                         |<kbd>M</kbd>                        |
+|Toggle top-down/right-left layout      |<kbd>[</kbd>                        |
+|Swap panes                             |<kbd>]</kbd>                        |
 |Rename files/folders                   |<kbd>R</kbd>                        |
 |Reset selections                       |<kbd>Esc</kbd>                      |
 |Help                                   |<kbd>?</kbd>                        |
@@ -96,6 +102,17 @@ Flags:
 |Switch between textview and buttons|<kbd>Left</kbd>/<kbd>Right</kbd>|
 |Scroll in textview                 |<kbd>Up</kbd>/<kbd>Down</kbd>   |
 |Select highlighted button          |<kbd>Enter</kbd>                |
+
+## Edit Selection Dialog
+|Operation                           |Key              |
+|------------------------------------|-----------------|
+|Select one item                     |<kbd>,</kbd>     |
+|Inverse selection                   |<kbd>a</kbd>     |
+|Select all items                    |<kbd>A</kbd>     |
+|Switch to filter input              |<kbd>/</kbd>     |
+|Switch between filter input and list|<kbd>Tab</kbd>   |
+|Save edited list                    |<kbd>Ctrl+s</kbd>|
+|Cancel editing list                 |<kbd>Esc</kbd>   |
 
 # Bugs
 -  In directories with a huge amount of entries, autocompletion will lag.
