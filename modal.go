@@ -320,22 +320,27 @@ func showHelpModal() {
 	Operation                     Key
 	---------                     ---
 	Switch between panes          Tab 
-	Navigate between entries      Up/Down
-	CD highlighted entry          Enter/Right
-	Change one directory back     Backspace/Left
-	Switch between ADB/Local      s
+	Navigate between entries      Up, Down
+	CD highlighted entry          Enter, Right
+	Change one directory back     Backspace, Left
 	Switch to operations page     o
-	Change to any directory       g
+	Switch between ADB/Local      s, <
+	Change to any directory       g, >
+	Toggle hidden files           h, .
 	Refresh                       r
 	Move                          m
 	Paste/Put                     p
 	Delete                        d
 	Make directory                M
 	Rename files/folders          R
-	Toggle hidden files           h
+	Filter entries                /
+	Clear filtered entries        Ctrl+r
 	Select one item               ,
 	Invert selection              a
 	Select all items              A
+	Edit selection list           S
+	Toggle layouts                [
+	Swap panes                    ]
 	Reset selections              Esc
 	Quit                          q
 
@@ -343,18 +348,18 @@ func showHelpModal() {
 	===============
 	Operation                     Key
 	---------                     ---
-	Navigate between entries      Up/Down
-	Switch to main page           o/Esc
+	Navigate between entries      Up, Down
 	Cancel selected operation     x
 	Cancel all operations         X
 	Clear operations list         C
+	Switch to main page           o, Esc
 
 	CHANGE DIRECTORY INPUT
 	======================
 	Operation                     Key
 	---------                     ---
-	Navigate between entries      Up/Down
-	Autocomplete                  Tab/Any key
+	Navigate between entries      Up, Down
+	Autocomplete                  Tab, Any key
 	CD to highlighted entry       Enter
 	Move back a directory         Ctrl+W
 	Switch to main page           Esc
@@ -370,8 +375,8 @@ func showHelpModal() {
 	============
 	Operation                     Key
 	---------                     ---
-	Switch b/w textview, buttons  Left/Right
-	Scroll in textview            Up/Down
+	Switch b/w textview, buttons  Left, Right
+	Scroll in textview            Up, Down
 	Select highlighted button     Enter
 
 	EDIT SELECTION DIALOG
@@ -381,8 +386,9 @@ func showHelpModal() {
 	Select one item               ,
 	Invert selection              a
 	Select all items              A
-	Switch b/w input, list        /, Tab
-	Save edited list              Ctrl+S
+	Switch to input               /
+	Switch b/w input, list        Tab
+	Save edited list              Ctrl+s
 	Cancel editing list           Esc
 	`)
 
