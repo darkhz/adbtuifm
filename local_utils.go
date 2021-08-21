@@ -214,12 +214,10 @@ func (p *dirPane) createDirList(cdFwd, cdBack bool, prevDir string) {
 			p.updateDirPane(row, sel, nil, dir)
 		}
 
-		if pos == 0 {
-			p.table.ScrollToBeginning()
-		}
+		p.table.Select(pos, 0)
+		p.table.ScrollToBeginning()
 
 		p.setPaneTitle()
-		p.table.Select(pos, 0)
 		p.setPaneSelectable(true)
 	})
 }

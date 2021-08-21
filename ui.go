@@ -85,8 +85,6 @@ func setupPaneView() *tview.Flex {
 	appflex := tview.NewFlex().
 		AddItem(mainflex, 0, 1, true)
 
-	appflex.SetBorder(true)
-	appflex.SetTitle("| ADBTuiFM |")
 	appflex.SetBackgroundColor(tcell.Color16)
 
 	selPane.table.SetBackgroundColor(tcell.Color16)
@@ -157,12 +155,9 @@ Header:
 		SetSelectable(false))
 
 	opsView.SetFixed(1, 1)
-	opsView.SetBorder(true)
 	opsView.SetBorders(true)
 	opsView.SetSelectable(false, false)
 	opsView.SetBackgroundColor(tcell.Color16)
-
-	opsView.SetTitle("| Operations |")
 
 	return opsView
 }
@@ -200,16 +195,16 @@ func setupPane(selPane, auxPane *dirPane) {
 		case '?':
 			showHelpModal()
 
-		case 'h':
+		case 'h', '.':
 			selPane.setHidden()
 
 		case '/':
 			selPane.showFilterInput()
 
-		case 's':
+		case 's', '<':
 			selPane.modeSwitchHandler()
 
-		case 'g':
+		case 'g', '>':
 			selPane.showChangeDirInput()
 			return nil
 
@@ -346,8 +341,6 @@ func (p *dirPane) reselect(psel bool) {
 			p.updateDirPane(row, checksel, nil, dir)
 		}
 	}
-
-	p.table.ScrollToBeginning()
 }
 
 func (p *dirPane) updateDirPane(row int, sel bool, cells []*tview.TableCell, dir *adb.DirEntry) {
