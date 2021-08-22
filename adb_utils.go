@@ -62,11 +62,9 @@ func (o *operation) adbOps(src, dst string) error {
 		return err
 	}
 
-	if o.opmode != opMkdir {
-		err = o.getTotalFiles(src)
-		if err != nil {
-			return err
-		}
+	err = o.getTotalFiles(src)
+	if err != nil {
+		return err
 	}
 
 	switch o.transfer {

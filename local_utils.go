@@ -240,11 +240,9 @@ func (p *dirPane) getPath() string {
 func (o *operation) localOps(src, dst string) error {
 	var err error
 
-	if o.opmode != opMkdir {
-		err = o.getTotalFiles(src)
-		if err != nil {
-			return err
-		}
+	err = o.getTotalFiles(src)
+	if err != nil {
+		return err
 	}
 
 	switch o.opmode {

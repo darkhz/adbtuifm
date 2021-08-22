@@ -311,7 +311,7 @@ func (o *operation) copyRecursive(src, dst string) error {
 }
 
 func (o *operation) getTotalFiles(src string) error {
-	if o.totalFile > 0 {
+	if o.totalFile > 0 || o.opmode != opCopy {
 		return nil
 	}
 
