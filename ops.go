@@ -149,7 +149,7 @@ func startOperation(srcPane, dstPane *dirPane, opmode opsMode, overwrite bool, m
 func transfermode(opmode opsMode, srcMode, dstMode ifaceMode) transferMode {
 	switch opmode {
 	case opDelete, opRename, opMkdir:
-		switch dstMode {
+		switch srcMode {
 		case mAdb:
 			return adbToAdb
 
