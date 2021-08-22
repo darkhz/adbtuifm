@@ -133,9 +133,13 @@ func (o *operation) execAdbCmd(src, dst string, device *adb.Device) error {
 	}
 
 	cmd = cmd + param
-	_, err := device.RunCommand(cmd)
+	out, err := device.RunCommand(cmd)
 	if err != nil {
 		return err
+	}
+
+	if out != "" {
+		return fmt.Errorf(out)
 	}
 
 	return nil

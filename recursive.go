@@ -173,16 +173,20 @@ func (o *operation) pushRecursive(src, dst string, device *adb.Device) error {
 	defer srcfd.Close()
 
 	cmd := fmt.Sprintf("mkdir '%s'", dst)
-	_, err = device.RunCommand(cmd)
+	out, err := device.RunCommand(cmd)
 	if err != nil {
 		return err
+	} else if out != "" {
+		return fmt.Errorf(out)
 	}
 
 	mode := fmt.Sprintf("%04o", stat.Mode().Perm())
 	cmd = fmt.Sprintf("chmod %s '%s'", mode, dst)
-	_, err = device.RunCommand(cmd)
+	out, err = device.RunCommand(cmd)
 	if err != nil {
 		return err
+	} else if out != "" {
+		return fmt.Errorf(out)
 	}
 
 	list, err := ioutil.ReadDir(src)
