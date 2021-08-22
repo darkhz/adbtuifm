@@ -147,7 +147,7 @@ func (p *dirPane) doChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
 		testPath = filepath.Join(testPath, p.entry.Name)
 
 	case cdBack:
-		prevDir = fmt.Sprintf("%s/", filepath.Base(testPath))
+		prevDir = filepath.Base(testPath)
 		testPath = trimPath(testPath, cdBack)
 	}
 
@@ -198,7 +198,7 @@ func (p *dirPane) createDirList(cdFwd, cdBack bool, prevDir string) {
 		for row, dir := range p.pathList {
 			switch {
 			case cdBack:
-				if dir.Name == prevDir {
+				if dir.Name == prevDir || dir.Name == prevDir+"/" {
 					pos = row
 				}
 
