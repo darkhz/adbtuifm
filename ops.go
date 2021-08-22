@@ -247,7 +247,9 @@ func clearAllOps() {
 
 func confirmOperation(selPane, auxPane *dirPane, opmode opsMode, mselect []selection) {
 	var alert bool
-	var paths []string
+	var msg strings.Builder
+
+	msg.Grow(len(mselect))
 
 	doFunc := func() {
 		go startOperation(selPane, auxPane, opmode, mselect)
@@ -258,7 +260,7 @@ func confirmOperation(selPane, auxPane *dirPane, opmode opsMode, mselect []selec
 	}
 
 	dstpath := auxPane.getPath()
-	msg := fmt.Sprintf("%s selected item(s)", opmode.String())
+	msg.WriteString(opmode.String() + " selected item(s)")
 
 	switch opmode {
 	case opRename, opMkdir:
@@ -267,18 +269,18 @@ func confirmOperation(selPane, auxPane *dirPane, opmode opsMode, mselect []selec
 
 	case opDelete:
 		alert = true
-		msg = fmt.Sprintf("%s from", msg)
+		msg.WriteString(" from ")
 
 	default:
 		alert = false
-		msg = fmt.Sprintf("%s to", msg)
+		msg.WriteString(" to ")
 	}
+
+	msg.WriteString(dstpath + "?\n\n")
 
 	for i := range mselect {
-		paths = append(paths, mselect[i].path)
+		msg.WriteString(mselect[i].path + "\n")
 	}
 
-	msg = fmt.Sprintf("%s %s?\n\n%s", msg, dstpath, strings.Join(paths, "\n"))
-
-	showConfirmModal(msg, alert, doFunc, resetFunc)
+	showConfirmModal(msg.String(), alert, doFunc, resetFunc)
 }
