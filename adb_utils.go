@@ -94,7 +94,7 @@ func (o *operation) execAdbCmd(src, dst string, device *adb.Device) error {
 	switch o.opmode {
 	case opMkdir:
 		cmd = "mkdir"
-		param = src
+		param = srcfmt
 
 	default:
 		stat, err := device.Stat(src)
