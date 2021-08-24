@@ -25,15 +25,20 @@ func opsHandler(selPane, auxPane *dirPane, key rune) {
 	defer selPane.setUnlock()
 
 	var opstmp opsMode
+	var overwrite bool
 	var srctmp []selection
 
 	switch key {
-	case 'p', 'm', 'd':
+	case 'p', 'P', 'm', 'd':
 		if len(multiselection) == 0 {
 			return
 		}
 
 		switch key {
+		case 'P':
+			overwrite = true
+			fallthrough
+
 		case 'p':
 			opstmp = opCopy
 
@@ -71,7 +76,7 @@ func opsHandler(selPane, auxPane *dirPane, key rune) {
 		return
 	}
 
-	confirmOperation(auxPane, selPane, opstmp, srctmp)
+	confirmOperation(auxPane, selPane, opstmp, overwrite, srctmp)
 }
 
 func (p *dirPane) modeSwitchHandler() {

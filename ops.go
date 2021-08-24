@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -82,7 +84,7 @@ func newOperation(opmode opsMode) operation {
 	}
 }
 
-func startOperation(srcPane, dstPane *dirPane, opmode opsMode, mselect []selection) {
+func startOperation(srcPane, dstPane *dirPane, opmode opsMode, overwrite bool, mselect []selection) {
 	var err error
 
 	total := len(mselect)
@@ -93,8 +95,25 @@ func startOperation(srcPane, dstPane *dirPane, opmode opsMode, mselect []selecti
 	op.opLog(opInProgress, nil)
 
 	for sel, msel := range mselect {
+		var src, dst string
+
+		src = msel.path
 		dpath := dstPane.getPath()
-		src, dst := op.setNewProgress(msel.path, dpath, sel, total)
+
+		if opmode == opRename {
+			dst = mrinput
+		} else {
+			dst = filepath.Join(dpath, filepath.Base(src))
+		}
+
+		if opmode == opCopy && !overwrite {
+			dst, err = altPath(src, dst, dstPane.mode)
+			if err != nil {
+				break
+			}
+		}
+
+		op.setNewProgress(src, dst, sel, total)
 
 		if err = isSamePath(src, dst, opmode); err != nil {
 			break
@@ -152,6 +171,53 @@ func transfermode(opmode opsMode, srcMode, dstMode ifaceMode) transferMode {
 	}
 
 	return localToLocal
+}
+
+func altPath(src, dst string, iface ifaceMode) (string, error) {
+	var try int
+	var existerr error
+
+	rel, err := filepath.Rel(src, dst)
+	if err != nil {
+		return dst, err
+	}
+
+	if !strings.HasPrefix(rel, ".") {
+		return dst, fmt.Errorf("Cannot Copy %s to %s", src, dst)
+	}
+
+	for {
+		switch iface {
+		case mAdb:
+			device, err := getAdb()
+			if err != nil {
+				return dst, err
+			}
+
+			_, existerr = device.Stat(dst)
+
+		case mLocal:
+			_, existerr = os.Lstat(dst)
+		}
+
+		if existerr != nil {
+			break
+		}
+
+		if dst[len(dst)-1:] != "_" && try == 0 {
+			dst = dst + "_"
+			continue
+		}
+
+		dst = strings.TrimRightFunc(dst, func(r rune) bool {
+			return r < 'A' || r > 'z'
+		})
+
+		dst += strconv.Itoa(try)
+		try++
+	}
+
+	return dst, nil
 }
 
 func isSamePath(src, dst string, opmode opsMode) error {
@@ -245,14 +311,14 @@ func clearAllOps() {
 	setupOpsView()
 }
 
-func confirmOperation(selPane, auxPane *dirPane, opmode opsMode, mselect []selection) {
+func confirmOperation(selPane, auxPane *dirPane, opmode opsMode, overwrite bool, mselect []selection) {
 	var alert bool
 	var msg strings.Builder
 
 	msg.Grow(len(mselect))
 
 	doFunc := func() {
-		go startOperation(selPane, auxPane, opmode, mselect)
+		go startOperation(selPane, auxPane, opmode, overwrite, mselect)
 	}
 
 	resetFunc := func() {

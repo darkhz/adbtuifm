@@ -224,7 +224,7 @@ func setupPane(selPane, auxPane *dirPane) {
 		case 'A', 'a', ',':
 			multiselect(selPane, event.Rune())
 
-		case 'm', 'p', 'd':
+		case 'm', 'p', 'P', 'd':
 			opsHandler(selPane, auxPane, event.Rune())
 
 		case 'M', 'R':

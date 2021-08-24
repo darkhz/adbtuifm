@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"sync"
 	"time"
 
@@ -73,18 +72,12 @@ func (o *operation) setSelIndex(selindex int) {
 	o.selindex = selindex
 }
 
-func (o *operation) setNewProgress(src, dst string, selindex, seltotal int) (string, string) {
+func (o *operation) setNewProgress(src, dst string, selindex, seltotal int) {
 	var tpath string
-
-	dst = filepath.Join(dst, filepath.Base(src))
 
 	switch o.opmode {
 	case opDelete, opMkdir:
 		tpath = src
-
-	case opRename:
-		dst = mrinput
-		fallthrough
 
 	default:
 		tpath = fmt.Sprintf("%s -> %s", src, dst)
@@ -100,8 +93,6 @@ func (o *operation) setNewProgress(src, dst string, selindex, seltotal int) (str
 
 	o.updateOpsView(2, tpath)
 	o.updateOpsView(3, "Calculating files..")
-
-	return src, dst
 }
 
 func setResume(status bool) {
