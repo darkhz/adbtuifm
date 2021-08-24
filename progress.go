@@ -92,7 +92,6 @@ func (o *operation) setNewProgress(src, dst string, selindex, seltotal int) {
 	}
 
 	o.updateOpsView(2, tpath)
-	o.updateOpsView(3, "Calculating files..")
 }
 
 func setResume(status bool) {
