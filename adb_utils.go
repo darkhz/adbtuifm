@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -131,13 +133,17 @@ func (o *operation) execAdbCmd(src, dst string, device *adb.Device) error {
 	}
 
 	cmd = cmd + param
-	out, err := device.RunCommand(cmd)
+	out, err := exec.CommandContext(o.ctx, "adb", "shell", cmd).Output()
 	if err != nil {
+		if err.Error() == "signal: killed" {
+			return error(context.Canceled)
+		}
+
 		return err
 	}
 
-	if out != "" {
-		return fmt.Errorf(out)
+	if string(out) != "" {
+		return fmt.Errorf(string(out))
 	}
 
 	return nil
