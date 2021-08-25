@@ -103,7 +103,15 @@ func (o *operation) execAdbCmd(src, dst string, device *adb.Device) error {
 		}
 
 		switch o.opmode {
-		case opMove, opRename:
+		case opRename:
+			_, err := device.Stat(dst)
+			if err == nil {
+				return fmt.Errorf("rename %s %s: file exists", src, dst)
+			}
+
+			fallthrough
+
+		case opMove:
 			cmd = "mv"
 
 		case opCopy:
@@ -112,6 +120,7 @@ func (o *operation) execAdbCmd(src, dst string, device *adb.Device) error {
 			} else {
 				cmd = "cp"
 			}
+
 		case opDelete:
 			if stat.Mode.IsDir() {
 				cmd = "rm -rf"
