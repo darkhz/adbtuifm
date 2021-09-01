@@ -145,6 +145,7 @@ func (o *operation) pushFile(src, dst string, entry os.FileInfo, device *adb.Dev
 	return nil
 }
 
+//gocyclo:ignore
 func (o *operation) pushRecursive(src, dst string, device *adb.Device) error {
 	select {
 	case <-o.ctx.Done():

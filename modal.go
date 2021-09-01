@@ -401,6 +401,7 @@ func showHelpModal() {
 	app.SetFocus(okbtn)
 }
 
+//gocyclo:ignore
 func showEditSelections() {
 	if len(multiselection) == 0 {
 		return

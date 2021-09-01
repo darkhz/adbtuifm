@@ -163,6 +163,7 @@ Header:
 	return opsView
 }
 
+//gocyclo:ignore
 func setupPane(selPane, auxPane *dirPane) {
 	selPane.table.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		prevPane = selPane
