@@ -1,4 +1,5 @@
 
+
 [![Go Report Card](https://goreportcard.com/badge/github.com/darkhz/adbtuifm)](https://goreportcard.com/report/github.com/darkhz/adbtuifm)
 # adbtuifm
 
@@ -44,34 +45,34 @@ Flags:
 **- Only Copy operations are cancellable, Move and Delete operations will persist**
 
 ## Main Page
-|Operation                              |Key                                 |
-|---------------------------------------|------------------------------------|
-|Switch between panes                   |<kbd>Tab</kbd>                      |
-|Navigate between entries               |<kbd>Up</kbd>/<kbd>Down</kbd>       |
-|Change directory to highlighted entry  |<kbd>Enter</kbd>/<kbd>Right</kbd>   |
-|Change one directory back              |<kbd>Backspace</kbd>/<kbd>Left</kbd>|
-|Switch to operations page              |<kbd>o</kbd>                        |
-|Switch between ADB/Local (in each pane)|<kbd>s</kbd>/<kbd><</kbd>           |
-|Change to any directory                |<kbd>g</kbd>/<kbd>></kbd>           |
-|Toggle hidden files                    |<kbd>h</kbd>/<kbd>.</kbd>           |
-|Refresh                                |<kbd>r</kbd>                        |
-|Move                                   |<kbd>m</kbd>                        |
-|Paste/Put                              |<kbd>p</kbd>                        |
-|Delete                                 |<kbd>d</kbd>                        |
-|Filter entries                         |<kbd>/</kbd>                        |
-|Clear filtered entries                 |<kbd>Ctrl+r</kbd>                   |
-|Select one item                        |<kbd>,</kbd>                        |
-|Inverse selection                      |<kbd>a</kbd>                        |
-|Select all items                       |<kbd>A</kbd>                        |
-|Edit selection list                    |<kbd>S</kbd>                        |
-|Make directory                         |<kbd>M</kbd>                        |
-|Toggle top-down/right-left layout      |<kbd>[</kbd>                        |
-|Swap panes                             |<kbd>]</kbd>                        |
-|Rename files/folders                   |<kbd>R</kbd>                        |
-|Reset selections                       |<kbd>Esc</kbd>                      |
-|Help                                   |<kbd>?</kbd>                        |
-|Quit                                   |<kbd>q</kbd>                        |
-
+|Operation                                 |Key                                 |
+|------------------------------------------|------------------------------------|
+|Switch between panes                      |<kbd>Tab</kbd>                      |
+|Navigate between entries                  |<kbd>Up</kbd>/<kbd>Down</kbd>       |
+|Change directory to highlighted entry     |<kbd>Enter</kbd>/<kbd>Right</kbd>   |
+|Change one directory back                 |<kbd>Backspace</kbd>/<kbd>Left</kbd>|
+|Switch to operations page                 |<kbd>o</kbd>                        |
+|Switch between ADB/Local (in each pane)   |<kbd>s</kbd>/<kbd><</kbd>           |
+|Change to any directory                   |<kbd>g</kbd>/<kbd>></kbd>           |
+|Toggle hidden files                       |<kbd>h</kbd>/<kbd>.</kbd>           |
+|Refresh                                   |<kbd>r</kbd>                        |
+|Move                                      |<kbd>m</kbd>                        |
+|Put/Paste (duplicate existing entry)      |<kbd>p</kbd>                        |
+|Put/Paste (don't duplicate existing entry)|<kbd>P</kbd>                        |
+|Delete                                    |<kbd>d</kbd>                        |
+|Filter entries                            |<kbd>/</kbd>                        |
+|Clear filtered entries                    |<kbd>Ctrl+r</kbd>                   |
+|Select one item                           |<kbd>,</kbd>                        |
+|Inverse selection                         |<kbd>a</kbd>                        |
+|Select all items                          |<kbd>A</kbd>                        |
+|Edit selection list                       |<kbd>S</kbd>                        |
+|Make directory                            |<kbd>M</kbd>                        |
+|Toggle top-down/right-left layout         |<kbd>[</kbd>                        |
+|Swap panes                                |<kbd>]</kbd>                        |
+|Rename files/folders                      |<kbd>R</kbd>                        |
+|Reset selections                          |<kbd>Esc</kbd>                      |
+|Help                                      |<kbd>?</kbd>                        |
+|Quit                                      |<kbd>q</kbd>                        |
 ## Operations Page
 |Operation                |Key                          |
 |-------------------------|-----------------------------|
