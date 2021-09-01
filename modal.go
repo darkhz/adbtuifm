@@ -403,7 +403,6 @@ func showHelpModal() {
 
 func showEditSelections() {
 	if len(multiselection) == 0 {
-		showErrorModal("Selection list empty")
 		return
 	}
 
