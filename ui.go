@@ -267,7 +267,7 @@ func reset(selPane, auxPane *dirPane) {
 	multiselection = make(map[string]ifaceMode)
 
 	selPane.table.SetSelectable(false, false)
-	selPane.reselect(false)
+	selPane.reselect(true)
 
 	app.SetFocus(selPane.table)
 	selPane.table.SetSelectable(true, false)
