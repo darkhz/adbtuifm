@@ -447,8 +447,10 @@ func (p *dirPane) setHidden() {
 
 	if p.hidden {
 		p.hidden = false
+		showInfoMsg("Showing hidden files")
 	} else {
 		p.hidden = true
+		showInfoMsg("Hiding hidden files")
 	}
 
 	p.ChangeDir(false, false)
