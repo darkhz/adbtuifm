@@ -14,7 +14,7 @@ import (
 func checkAdb() bool {
 	_, err := getAdb()
 	if err != nil {
-		showErrorModal(err.Error())
+		showErrorMsg(err, false)
 		return false
 	}
 
@@ -154,19 +154,19 @@ func (p *dirPane) adbListDir(testPath string, autocomplete bool) ([]string, bool
 
 	device, err := getAdb()
 	if err != nil {
-		showError(err, autocomplete)
+		showErrorMsg(err, autocomplete)
 		return nil, false
 	}
 
 	_, err = device.Stat(testPath)
 	if err != nil {
-		showError(err, autocomplete)
+		showErrorMsg(err, autocomplete)
 		return nil, false
 	}
 
 	dent, err := device.ListDirEntries(testPath)
 	if err != nil {
-		showError(err, autocomplete)
+		showErrorMsg(err, autocomplete)
 		return nil, false
 	}
 

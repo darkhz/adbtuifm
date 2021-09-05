@@ -49,7 +49,7 @@ func opsHandler(selPane, auxPane *dirPane, key rune) {
 			opstmp = opDelete
 		}
 
-		srctmp = getselection()
+		srctmp = nil
 
 	case 'M', 'R':
 		var srcpath string
@@ -70,10 +70,6 @@ func opsHandler(selPane, auxPane *dirPane, key rune) {
 		}
 
 		srctmp = []selection{{srcpath, selPane.mode}}
-	}
-
-	if len(srctmp) == 0 {
-		return
 	}
 
 	confirmOperation(auxPane, selPane, opstmp, overwrite, srctmp)

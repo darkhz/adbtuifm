@@ -313,11 +313,12 @@ func clearAllOps() {
 
 func confirmOperation(selPane, auxPane *dirPane, opmode opsMode, overwrite bool, mselect []selection) {
 	var alert bool
-	var msg strings.Builder
-
-	msg.Grow(len(mselect))
 
 	doFunc := func() {
+		if mselect == nil {
+			mselect = getselection()
+		}
+
 		go startOperation(selPane, auxPane, opmode, overwrite, mselect)
 	}
 
@@ -326,7 +327,7 @@ func confirmOperation(selPane, auxPane *dirPane, opmode opsMode, overwrite bool,
 	}
 
 	dstpath := auxPane.getPath()
-	msg.WriteString(opmode.String() + " selected item(s)")
+	msg := opmode.String() + " selected item(s)"
 
 	switch opmode {
 	case opRename, opMkdir:
@@ -335,18 +336,20 @@ func confirmOperation(selPane, auxPane *dirPane, opmode opsMode, overwrite bool,
 
 	case opDelete:
 		alert = true
-		msg.WriteString(" from ")
+		msg += " from "
 
 	default:
 		alert = false
-		msg.WriteString(" to ")
+		msg += " to "
 	}
 
-	msg.WriteString(dstpath + "?\n\n")
+	msg += dstpath
 
-	for i := range mselect {
-		msg.WriteString(mselect[i].path + "\n")
+	if opmode == opCopy && overwrite {
+		msg += " (will overwrite existing)"
 	}
 
-	showConfirmModal(msg.String(), alert, doFunc, resetFunc)
+	msg += " [y/n/S]?"
+
+	showConfirmMsg(msg, alert, doFunc, resetFunc)
 }

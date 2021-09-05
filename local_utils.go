@@ -79,13 +79,13 @@ func (p *dirPane) localListDir(testPath string, autocomplete bool) ([]string, bo
 
 	_, err := os.Lstat(testPath)
 	if err != nil {
-		showError(err, autocomplete)
+		showErrorMsg(err, autocomplete)
 		return nil, false
 	}
 
 	file, err := os.Open(testPath)
 	if err != nil {
-		showError(err, autocomplete)
+		showErrorMsg(err, autocomplete)
 		return nil, false
 	}
 	defer file.Close()

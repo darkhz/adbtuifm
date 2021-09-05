@@ -1,291 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
-
-var (
-	mrinput    string
-	entrycache []string
-)
-
-func showMkdirRenameInput(selPane, auxPane *dirPane, key rune) {
-	var title string
-
-	switch key {
-	case 'M':
-		title = "Make directory"
-	case 'R':
-		title = "Rename To"
-	}
-
-	input := tview.NewInputField()
-
-	input.SetBorder(true)
-	input.SetTitle(title)
-	input.SetTitleAlign(tview.AlignCenter)
-
-	input.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		switch event.Key() {
-		case tcell.KeyEnter:
-			text := input.GetText()
-			if text != "" {
-				mrinput = text
-				opsHandler(selPane, auxPane, key)
-			}
-
-			fallthrough
-
-		case tcell.KeyEscape:
-			pages.SwitchToPage("main")
-			app.SetFocus(selPane.table)
-		}
-
-		return event
-	})
-
-	pages.AddAndSwitchToPage("modal", field(input, 60, 3), true).ShowPage("main")
-	app.SetFocus(input)
-}
-
-func (p *dirPane) showFilterInput() {
-	input := tview.NewInputField()
-
-	input.SetBorder(true)
-	input.SetTitle("Filter")
-	input.SetTitleAlign(tview.AlignCenter)
-
-	input.SetChangedFunc(func(text string) {
-		if text == "" {
-			p.reselect(false)
-			p.table.Select(0, 0)
-			p.table.ScrollToBeginning()
-
-			return
-		}
-
-		if !p.getLock() {
-			return
-		}
-		defer p.setUnlock()
-
-		p.table.Clear()
-
-		var row int
-		for _, dir := range p.pathList {
-			if strings.Contains(
-				strings.ToLower(dir.Name),
-				strings.ToLower(text),
-			) {
-				sel := checkSelected(p.path, dir.Name, false)
-
-				p.updateDirPane(row, sel, nil, dir)
-				row++
-			}
-		}
-
-		p.table.Select(0, 0)
-		p.table.ScrollToBeginning()
-	})
-
-	input.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		switch event.Key() {
-		case tcell.KeyEscape, tcell.KeyEnter:
-			pages.SwitchToPage("main")
-			app.SetFocus(p.table)
-		}
-
-		return event
-	})
-
-	pages.AddAndSwitchToPage("modal", field(input, 60, 3), true).ShowPage("main")
-	app.SetFocus(input)
-}
-
-func (p *dirPane) showChangeDirInput() {
-	input := tview.NewInputField()
-
-	input.SetText(p.path)
-	input.SetBorder(true)
-	input.SetTitle("Change Directory to:")
-	input.SetTitleAlign(tview.AlignCenter)
-
-	input.SetAutocompleteFunc(func(current string) (entries []string) {
-		var tmpentry []string
-
-		if len(current) == 0 {
-			return
-		}
-
-		switch p.mode {
-		case mAdb:
-			tmpentry, _ = p.adbListDir(current, true)
-		case mLocal:
-			tmpentry, _ = p.localListDir(current, true)
-		}
-
-		if tmpentry != nil {
-			entrycache = tmpentry
-		} else {
-			tmpentry = entrycache
-		}
-
-		for _, ent := range tmpentry {
-			if strings.Index(ent, current) != -1 {
-				entries = append(entries, ent)
-			}
-		}
-
-		return
-	})
-
-	input.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		switch event.Key() {
-		case tcell.KeyTab:
-			input.Autocomplete()
-
-		case tcell.KeyEnter:
-			p.ChangeDir(false, false, input.GetText())
-			fallthrough
-
-		case tcell.KeyEscape:
-			pages.SwitchToPage("main")
-			app.SetFocus(p.table)
-
-		case tcell.KeyCtrlW:
-			input.SetText(trimPath(input.GetText(), true))
-			input.Autocomplete()
-			return nil
-
-		case tcell.KeyBackspace, tcell.KeyBackspace2:
-			fallthrough
-
-		case tcell.KeyDown, tcell.KeyUp, tcell.KeyLeft, tcell.KeyRight:
-			return event
-		}
-
-		switch event.Rune() {
-		default:
-			input.Autocomplete()
-		}
-
-		return event
-	})
-
-	pages.AddAndSwitchToPage("modal", field(input, 60, 3), true).ShowPage("main")
-	app.SetFocus(input)
-}
-
-func showConfirmModal(msg string, alert bool, dofunc, resetfunc func()) {
-	var color tcell.Color
-
-	if alert {
-		color = tcell.ColorRed
-	} else {
-		color = tcell.ColorBlue
-	}
-
-	view := tview.NewTextView()
-	view.SetScrollable(true)
-	view.SetBackgroundColor(color)
-
-	okbtn := tview.NewButton("Ok")
-	okbtn.SetBackgroundColor(tcell.ColorBlack)
-
-	cancelbtn := tview.NewButton("Cancel")
-	cancelbtn.SetBackgroundColor(tcell.ColorBlack)
-
-	view.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		switch event.Key() {
-		case tcell.KeyRight:
-			app.SetFocus(cancelbtn)
-		}
-
-		return event
-	})
-
-	cancelbtn.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		switch event.Key() {
-		case tcell.KeyEnter:
-			pages.SwitchToPage("main")
-			app.SetFocus(prevPane.table)
-
-		case tcell.KeyLeft:
-			app.SetFocus(view)
-
-		case tcell.KeyRight:
-			app.SetFocus(okbtn)
-
-		}
-
-		return event
-	})
-
-	okbtn.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		switch event.Key() {
-		case tcell.KeyEnter:
-			pages.SwitchToPage("main")
-			dofunc()
-			resetfunc()
-
-		case tcell.KeyLeft:
-			app.SetFocus(cancelbtn)
-		}
-
-		return event
-	})
-
-	msg = fmt.Sprintf("%s", msg)
-	view.SetText(msg)
-
-	info := modal(view, okbtn, cancelbtn, color, 50, 10)
-	pages.AddAndSwitchToPage("modal", info, true).ShowPage("main")
-
-	app.SetFocus(cancelbtn)
-}
-
-func showErrorModal(msg string) {
-	errview := tview.NewTextView()
-	errview.SetDynamicColors(true)
-	errview.SetScrollable(true)
-
-	okbtn := tview.NewButton("Ok")
-
-	errview.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		switch event.Key() {
-		case tcell.KeyRight:
-			app.SetFocus(okbtn)
-		}
-
-		return event
-	})
-
-	okbtn.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		switch event.Key() {
-		case tcell.KeyLeft:
-			app.SetFocus(errview)
-
-		case tcell.KeyEnter:
-			pages.SwitchToPage("main")
-			app.SetFocus(prevPane.table)
-			prevPane.table.SetSelectable(true, false)
-		}
-
-		return event
-	})
-
-	msg = fmt.Sprintf("[red]An error has occurred:\n\n%s", msg)
-	errview.SetText(msg)
-
-	err := modal(errview, okbtn, nil, tcell.ColorBlack, 50, 10)
-	pages.AddAndSwitchToPage("modal", err, true).ShowPage("main")
-
-	app.SetFocus(okbtn)
-}
 
 func showHelpModal() {
 	helpview := tview.NewTextView()
@@ -402,7 +122,7 @@ func showHelpModal() {
 }
 
 //gocyclo:ignore
-func showEditSelections() {
+func showEditSelections(status *tview.InputField) {
 	if len(multiselection) == 0 {
 		return
 	}
@@ -425,8 +145,20 @@ func showEditSelections() {
 
 	exit := func() {
 		pages.SwitchToPage("main")
-		app.SetFocus(prevPane.table)
-		prevPane.table.SetSelectable(true, false)
+
+		if status != nil {
+			if len(multiselection) == 0 {
+				statuspgs.SwitchToPage("statusmsg")
+				app.SetFocus(prevPane.table)
+				return
+			}
+
+			app.SetFocus(status)
+
+		} else {
+			app.SetFocus(prevPane.table)
+			prevPane.table.SetSelectable(true, false)
+		}
 	}
 
 	save := func() {

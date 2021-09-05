@@ -68,6 +68,7 @@ func setupPaneView() *tview.Flex {
 
 	prevPane = selPane
 
+	setupStatus()
 	setupPane(selPane, auxPane)
 	setupPane(auxPane, selPane)
 
@@ -80,18 +81,23 @@ func setupPaneView() *tview.Flex {
 		AddItem(panes, 0, 2, true).
 		SetDirection(tview.FlexRow)
 
-	mainflex := tview.NewFlex().
+	wrapView := tview.NewFlex().
 		AddItem(wrapPanes, 0, 2, false)
 
-	appflex := tview.NewFlex().
-		AddItem(mainflex, 0, 1, true)
+	wrapFlex := tview.NewFlex().
+		AddItem(wrapView, 0, 1, true)
 
-	appflex.SetBackgroundColor(tcell.Color16)
+	wrapStatus := tview.NewFlex().
+		AddItem(wrapFlex, 0, 2, true).
+		AddItem(statuspgs, 1, 0, true).
+		SetDirection(tview.FlexRow)
+
+	wrapFlex.SetBackgroundColor(tcell.Color16)
 
 	selPane.table.SetBackgroundColor(tcell.Color16)
 	auxPane.table.SetBackgroundColor(tcell.Color16)
 
-	return appflex
+	return wrapStatus
 }
 
 func setupOpsView() *tview.Table {
@@ -130,6 +136,7 @@ func setupOpsView() *tview.Table {
 			go cancelAllOps()
 
 		case 'q':
+			pages.SwitchToPage("main")
 			stopApp()
 		}
 
@@ -214,7 +221,7 @@ func setupPane(selPane, auxPane *dirPane) {
 			selPane.ChangeDir(false, false)
 
 		case 'S':
-			showEditSelections()
+			showEditSelections(nil)
 
 		case '[':
 			swapLayout(selPane, auxPane)
@@ -460,8 +467,18 @@ func (p *dirPane) getLock() bool {
 }
 
 func stopApp() {
-	showConfirmModal("Do you want to quit?", false, func() {
+	quitmsg := "Quit"
+
+	istask := opsView.GetRowCount()
+	if istask > 0 {
+		quitmsg += " (jobs are still running)"
+	}
+
+	quitmsg += " (y/n)?"
+
+	showConfirmMsg(quitmsg, false, func() {
 		app.Stop()
+		stopStatus()
 		cancelAllOps()
 	}, func() {})
 }

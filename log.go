@@ -25,16 +25,6 @@ func setUpdateUnlock() {
 	updateLock.Release(1)
 }
 
-func showError(err error, autocomplete bool) {
-	if autocomplete {
-		return
-	}
-
-	app.QueueUpdateDraw(func() {
-		showErrorModal(err.Error())
-	})
-}
-
 func (o *operation) updateOpsView(col int, msg string) {
 	app.QueueUpdateDraw(func() {
 		if col == 0 {
@@ -77,7 +67,7 @@ func (o *operation) opLog(status opStatus, err error) {
 
 		default:
 			o.updateOpsView(3, "[red]ERROR")
-			showError(err, false)
+			showErrorMsg(err, false)
 		}
 
 		jobFinished(o.id)
