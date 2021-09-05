@@ -166,7 +166,9 @@ func (p *dirPane) adbListDir(testPath string, autocomplete bool) ([]string, bool
 		return nil, false
 	}
 
-	p.pathList = nil
+	if !autocomplete {
+		p.pathList = nil
+	}
 
 	for dent.Next() {
 		ent := dent.Entry()

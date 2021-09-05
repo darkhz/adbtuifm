@@ -95,7 +95,9 @@ func (p *dirPane) localListDir(testPath string, autocomplete bool) ([]string, bo
 
 	list, _ := ioutil.ReadDir(testPath)
 
-	p.pathList = nil
+	if !autocomplete {
+		p.pathList = nil
+	}
 
 	for _, entry := range list {
 		var d adb.DirEntry
@@ -163,6 +165,7 @@ func (p *dirPane) doChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
 	}
 
 	if !listed {
+		p.setPaneSelectable(true)
 		return
 	}
 
