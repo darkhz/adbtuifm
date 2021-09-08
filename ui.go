@@ -462,7 +462,10 @@ func (p *dirPane) setPaneTitle() {
 
 func (p *dirPane) setPaneSelectable(status bool) {
 	if status {
-		prevPane.table.SetSelectable(true, false)
+		if p.table.HasFocus() {
+			p.table.SetSelectable(true, false)
+		}
+
 		return
 	}
 
