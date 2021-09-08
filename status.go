@@ -120,15 +120,9 @@ func showConfirmMsg(msg string, alert bool, doFunc, resetFunc func()) {
 	infomsg := func() {
 		info := strings.Fields(msg)[0]
 
-		switch info {
-		case "Move", "Delete":
-			info = info[0 : len(info)-1]
-			fallthrough
+		info = opString(info)
 
-		case "Copy":
-			info += "ing"
-
-		default:
+		if info == "" {
 			return
 		}
 

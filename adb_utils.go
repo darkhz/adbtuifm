@@ -64,11 +64,6 @@ func (o *operation) adbOps(src, dst string) error {
 		return err
 	}
 
-	err = o.getTotalFiles(src)
-	if err != nil {
-		return err
-	}
-
 	switch o.transfer {
 	case adbToAdb:
 		err = o.execAdbCmd(src, dst, device)
@@ -134,6 +129,7 @@ func (o *operation) execAdbCmd(src, dst string, device *adb.Device) error {
 
 	cmd = cmd + param
 	out, err := exec.CommandContext(o.ctx, "adb", "shell", cmd).Output()
+
 	if err != nil {
 		if err.Error() == "signal: killed" {
 			return error(context.Canceled)

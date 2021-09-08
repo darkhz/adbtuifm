@@ -11,16 +11,16 @@ import (
 )
 
 type operation struct {
-	id        int
-	currFile  int
-	totalFile int
-	selindex  int
-	finished  bool
-	opmode    opsMode
-	ctx       context.Context
-	cancel    context.CancelFunc
-	transfer  transferMode
-	selLock   sync.Mutex
+	id         int
+	currFile   int
+	totalFile  int
+	currBytes  int64
+	totalBytes int64
+	opmode     opsMode
+	transfer   transferMode
+	progress   progressMode
+	ctx        context.Context
+	cancel     context.CancelFunc
 }
 
 type ifaceMode int
@@ -61,9 +61,24 @@ func (m opsMode) String() string {
 	return opstr[m]
 }
 
+func opString(mode string) string {
+	switch mode {
+	case "Move", "Delete":
+		mode = mode[0 : len(mode)-1]
+		fallthrough
+
+	case "Copy":
+		mode += "ing"
+
+	default:
+		return ""
+	}
+
+	return mode
+}
+
 var (
-	jobNum  int
-	jobList []operation
+	jobNum int
 
 	opPaths    []string
 	opPathLock sync.Mutex
@@ -74,13 +89,12 @@ func newOperation(opmode opsMode) operation {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return operation{
-		id:        jobNum,
-		opmode:    opmode,
-		ctx:       ctx,
-		cancel:    cancel,
-		transfer:  transfer,
-		currFile:  0,
-		totalFile: 0,
+		id:         jobNum,
+		opmode:     opmode,
+		ctx:        ctx,
+		cancel:     cancel,
+		transfer:   transfer,
+		totalBytes: -1,
 	}
 }
 
@@ -90,9 +104,8 @@ func startOperation(srcPane, dstPane *dirPane, opmode opsMode, overwrite bool, m
 	total := len(mselect)
 
 	op := newOperation(opmode)
-	jobList = append(jobList, op)
 
-	op.opLog(opInProgress, nil)
+	op.opSetStatus(opInProgress, nil)
 
 	for sel, msel := range mselect {
 		var src, dst string
@@ -113,8 +126,6 @@ func startOperation(srcPane, dstPane *dirPane, opmode opsMode, overwrite bool, m
 			}
 		}
 
-		op.setNewProgress(src, dst, sel, total)
-
 		if err = isSamePath(src, dst, opmode); err != nil {
 			break
 		}
@@ -124,6 +135,10 @@ func startOperation(srcPane, dstPane *dirPane, opmode opsMode, overwrite bool, m
 		}
 
 		op.transfer = transfermode(opmode, msel.smode, dstPane.mode)
+
+		if err = op.setNewProgress(src, dst, sel, total); err != nil {
+			break
+		}
 
 		switch op.transfer {
 		case localToLocal:
@@ -140,7 +155,7 @@ func startOperation(srcPane, dstPane *dirPane, opmode opsMode, overwrite bool, m
 		}
 	}
 
-	op.opLog(opDone, err)
+	op.opSetStatus(opDone, err)
 
 	srcPane.ChangeDir(false, false)
 	dstPane.ChangeDir(false, false)
@@ -274,41 +289,57 @@ func rmOpsPath(src, dst string) {
 	opPaths = paths
 }
 
-func jobFinished(id int) {
-	jobList[id].finished = true
+func iterOps(all bool, o *operation, cfunc func(row, rows int, op *operation)) {
+	rows := opsView.GetRowCount()
+
+	for i := 0; i < rows; i++ {
+		cell := opsView.GetCell(i, 0)
+		if cell == nil {
+			continue
+		}
+
+		ref := cell.GetReference()
+		if ref == nil {
+			continue
+		}
+
+		op := ref.(*operation)
+		if o != nil {
+			if op != o {
+				continue
+			}
+		}
+
+		cfunc(i, rows, op)
+
+		if !all {
+			break
+		}
+	}
 }
 
-func cancelOps(id int) {
-	if !getUpdateLock() {
-		return
-	}
-	defer setUpdateUnlock()
+func (o *operation) jobFinished() {
+	app.QueueUpdateDraw(func() {
+		iterOps(false, o, func(row, rows int, op *operation) {
+			opsView.RemoveRow(row)
+			opsView.RemoveRow(row - 1)
 
-	jobList[id].cancel()
+			resetOpsView()
+			jobNum = (rows - 2) / 2
+		})
+	})
+}
+
+func (o *operation) cancelOps() {
+	o.cancel()
 }
 
 func cancelAllOps() {
-	for id := range jobList {
-		cancelOps(id)
-	}
-}
-
-func clearAllOps() {
-	if !getUpdateLock() {
-		return
-	}
-	defer setUpdateUnlock()
-
-	for id := range jobList {
-		if !jobList[id].finished {
-			return
-		}
-	}
+	iterOps(true, nil, func(row, rows int, op *operation) {
+		op.cancelOps()
+	})
 
 	jobNum = 0
-	jobList = nil
-
-	setupOpsView()
 }
 
 func confirmOperation(selPane, auxPane *dirPane, opmode opsMode, overwrite bool, mselect []selection) {

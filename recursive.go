@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -11,7 +12,7 @@ import (
 	"syscall"
 
 	"github.com/dolmen-go/contextio"
-	"github.com/machinebox/progress"
+	"github.com/schollz/progressbar/v3"
 	adb "github.com/zach-klippenstein/goadb"
 )
 
@@ -28,20 +29,15 @@ func (o *operation) pullFile(src, dst string, entry *adb.DirEntry, device *adb.D
 	}
 	defer local.Close()
 
-	cioOut := contextio.NewWriter(o.ctx, local)
-	prgOut := progress.NewWriter(cioOut)
+	cioIn := contextio.NewReader(o.ctx, remote)
+	prgIn := progressbar.NewReader(cioIn, o.progress.pbar)
 
-	o.startProgress(o.currFile,
-		o.totalFile,
-		o.selindex,
-		int64(entry.Size),
-		prgOut,
-		recursive)
-
-	_, err = io.Copy(prgOut, remote)
+	_, err = io.Copy(local, &prgIn)
 	if err != nil {
 		return err
 	}
+
+	o.updatePb()
 
 	return nil
 }
@@ -127,20 +123,14 @@ func (o *operation) pushFile(src, dst string, entry os.FileInfo, device *adb.Dev
 	defer remote.Close()
 
 	cioIn := contextio.NewReader(o.ctx, local)
-	prgIn := progress.NewReader(cioIn)
+	prgIn := progressbar.NewReader(cioIn, o.progress.pbar)
 
-	o.startProgress(o.currFile,
-		o.totalFile,
-		o.selindex,
-		entry.Size(),
-		prgIn,
-		recursive)
-
-	_, err = io.Copy(remote, prgIn)
-
+	_, err = io.Copy(remote, &prgIn)
 	if err != nil {
 		return err
 	}
+
+	o.updatePb()
 
 	return nil
 }
@@ -241,19 +231,14 @@ func (o *operation) copyFile(src, dst string, entry os.FileInfo, recursive bool)
 	defer srcFile.Close()
 
 	cioIn := contextio.NewReader(o.ctx, srcFile)
-	prgIn := progress.NewReader(cioIn)
+	prgIn := progressbar.NewReader(cioIn, o.progress.pbar)
 
-	o.startProgress(o.currFile,
-		o.totalFile,
-		o.selindex,
-		entry.Size(),
-		prgIn,
-		recursive)
-
-	_, err = io.Copy(dstFile, prgIn)
+	_, err = io.Copy(dstFile, &prgIn)
 	if err != nil {
 		return err
 	}
+
+	o.updatePb()
 
 	return nil
 }
@@ -316,7 +301,11 @@ func (o *operation) getTotalFiles(src string) error {
 		return nil
 	}
 
-	if o.transfer == adbToAdb || o.transfer == adbToLocal {
+	if o.transfer == adbToAdb {
+		return nil
+	}
+
+	if o.transfer == adbToLocal {
 		device, err := getAdb()
 		if err != nil {
 			return err
@@ -333,6 +322,17 @@ func (o *operation) getTotalFiles(src string) error {
 			return err
 		}
 
+		cmd = fmt.Sprintf("du -d0 -sh '%s'", src)
+		out, err = device.RunCommand(cmd)
+		if err != nil {
+			return err
+		}
+
+		o.totalBytes, err = getByteSize(strings.Fields(out)[0])
+		if err != nil {
+			return err
+		}
+
 		return nil
 	}
 
@@ -343,10 +343,41 @@ func (o *operation) getTotalFiles(src string) error {
 
 		if !entry.IsDir() {
 			o.totalFile++
+			o.totalBytes += entry.Size()
 		}
 
 		return nil
 	})
 
 	return err
+}
+
+func getByteSize(str string) (int64, error) {
+	var exp int
+	var err error
+	var size int64
+
+	const unit = 1024
+	const suffixes = "KMGTPE"
+
+	num := str[:len(str)-1]
+	suffix := str[len(str)-1:]
+
+	for i := 0; i < len(suffixes); i++ {
+		if string(suffixes[i]) == suffix {
+			exp = i
+			break
+		}
+	}
+
+	if strings.Contains(num, ".") {
+		num = strings.Split(num, ".")[0]
+	}
+
+	size, err = strconv.ParseInt(num, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+
+	return int64(size) * int64(math.Pow(unit, float64(exp+1))), nil
 }

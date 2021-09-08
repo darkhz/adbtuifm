@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -101,39 +100,42 @@ func setupPaneView() *tview.Flex {
 }
 
 func setupOpsView() *tview.Table {
-	if opsView != nil {
-		opsView.Clear()
-		goto Header
-	}
-
 	opsView = tview.NewTable()
 
-	opsView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		switch event.Key() {
-		case tcell.KeyEscape:
-			setResume(false)
+	exit := func() {
+		if opsView.HasFocus() {
 			pages.SwitchToPage("main")
 			app.SetFocus(prevPane.table)
 			opsView.SetSelectable(false, false)
 		}
+	}
+
+	canceltask := func() {
+		row, _ := opsView.GetSelection()
+		ref := opsView.GetCell(row, 0).GetReference()
+
+		if ref != nil {
+			ref.(*operation).cancelOps()
+		}
+	}
+
+	opsView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyEscape:
+			exit()
+		}
 
 		switch event.Rune() {
-		case 'o':
-			setResume(false)
-			pages.SwitchToPage("main")
-			app.SetFocus(prevPane.table)
-			opsView.SetSelectable(false, false)
-
 		case 'x':
-			r, _ := opsView.GetSelection()
-			id, _ := strconv.Atoi(opsView.GetCell(r, 0).Text)
-			cancelOps(id)
-
-		case 'C':
-			clearAllOps()
+			canceltask()
 
 		case 'X':
+			opsView.Clear()
 			go cancelAllOps()
+			fallthrough
+
+		case 'o':
+			exit()
 
 		case 'q':
 			pages.SwitchToPage("main")
@@ -143,28 +145,13 @@ func setupOpsView() *tview.Table {
 		return event
 	})
 
-Header:
-	opsView.SetCell(0, 0, tview.NewTableCell("ID").
-		SetSelectable(false))
-
-	opsView.SetCell(0, 1, tview.NewTableCell("Type").
-		SetExpansion(1).
-		SetAlign(tview.AlignCenter).
-		SetSelectable(false))
-
-	opsView.SetCell(0, 2, tview.NewTableCell("Path").
-		SetExpansion(1).
-		SetAlign(tview.AlignCenter).
-		SetSelectable(false))
-
-	opsView.SetCell(0, 3, tview.NewTableCell("Status").
-		SetExpansion(1).
-		SetAlign(tview.AlignCenter).
-		SetSelectable(false))
-
-	opsView.SetFixed(1, 1)
-	opsView.SetBorders(true)
+	opsView.SetBorder(true)
 	opsView.SetSelectable(false, false)
+
+	opsView.SetTitle("[::bu]Operations")
+	opsView.SetTitleAlign(tview.AlignLeft)
+
+	opsView.SetBorderColor(tcell.Color16)
 	opsView.SetBackgroundColor(tcell.Color16)
 
 	return opsView
@@ -249,7 +236,13 @@ func setupPane(selPane, auxPane *dirPane) {
 }
 
 func opsPage() {
-	setResume(true)
+	rows := opsView.GetRowCount()
+
+	if rows == 0 {
+		showInfoMsg("No operations in queue")
+		return
+	}
+
 	app.SetFocus(opsView)
 	pages.SwitchToPage("ops")
 	opsView.SetSelectable(true, false)
@@ -272,6 +265,21 @@ func reset(selPane, auxPane *dirPane) {
 	app.SetFocus(selPane.table)
 	selPane.table.SetSelectable(true, false)
 	auxPane.table.SetSelectable(false, false)
+}
+
+func resetOpsView() {
+	count := opsView.GetRowCount()
+	row, _ := opsView.GetSelection()
+
+	switch {
+	case count/2 == 0:
+		pages.SwitchToPage("main")
+		app.SetFocus(prevPane.table)
+		opsView.SetSelectable(false, false)
+
+	case row-1 == count:
+		opsView.Select(row-2, 0)
+	}
 }
 
 func swapLayout(selPane, auxPane *dirPane) {

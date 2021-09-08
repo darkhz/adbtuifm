@@ -65,7 +65,6 @@ func main() {
 
 	jobNum = 0
 	selected = false
-	setResume(false)
 	multiselection = make(map[string]ifaceMode)
 
 	setupUI()
