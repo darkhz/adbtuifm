@@ -278,43 +278,44 @@ func getListEntry(dir *adb.DirEntry) []string {
 	return entry
 }
 
-func setEntryColor(col int, sel bool, perms string) tcell.Color {
+func setEntryColor(col int, sel bool, perms string) (tcell.Color, tcell.AttrMask) {
 	if col > 0 {
 		switch {
 		case !layoutToggle:
-			return tcell.Color16
+			return tcell.Color16, tcell.AttrNone
 
 		case sel:
-			return tcell.ColorOrange
+			return tcell.ColorOrange, tcell.AttrBold
 		}
 
-		return tcell.ColorGrey
+		return tcell.ColorGrey, tcell.AttrBold
 	}
 
 	if sel {
-		return tcell.ColorOrange
-	}
-
-	if perms == "-rwxr-xr-x" {
-		return tcell.Color82
+		return tcell.ColorOrange, tcell.AttrBold
 	}
 
 	switch perms[0] {
+	case '-':
+		if strings.Contains(perms, "x") {
+			return tcell.Color82, tcell.AttrNone
+		}
+
 	case 'l':
-		return tcell.ColorAqua
+		return tcell.ColorAqua, tcell.AttrBold
 
 	case 'd':
-		return tcell.ColorBlue
-
-	case 'c':
-		return tcell.ColorYellow
+		return tcell.ColorBlue, tcell.AttrBold
 
 	case 's':
-		return tcell.ColorViolet
+		return tcell.ColorViolet, tcell.AttrBold
+
+	case 'p', 'c':
+		return tcell.ColorYellow, tcell.AttrBold
 
 	case 'u', 't':
-		return tcell.ColorRed
+		return tcell.ColorRed, tcell.AttrBold
 	}
 
-	return tcell.ColorWhite
+	return tcell.ColorWhite, tcell.AttrNone
 }

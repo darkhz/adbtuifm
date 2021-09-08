@@ -105,6 +105,8 @@ func (p *dirPane) multiSelectHandler(all, inverse bool, totalrows int) {
 	}
 	defer p.setUnlock()
 
+	pos, _ := p.table.GetSelection()
+
 	selected = true
 
 	mselone := !all && !inverse
@@ -140,14 +142,17 @@ func (p *dirPane) multiSelectHandler(all, inverse bool, totalrows int) {
 
 		p.updateDirPane(i, !checksel, cells, nil)
 
-		if i+1 < totalrows && mselone {
-			p.table.Select(i+1, 0)
-		}
-
 		if mselone {
-			return
+			if i+1 < totalrows {
+				p.table.Select(i+1, 0)
+				return
+			}
+
+			break
 		}
 	}
+
+	p.table.Select(pos, 0)
 }
 
 func checkSelected(panepath, dirname string, rm bool) bool {

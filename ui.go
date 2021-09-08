@@ -232,6 +232,25 @@ func setupPane(selPane, auxPane *dirPane) {
 	selPane.table.SetBorder(true)
 	selPane.table.SetSelectable(true, false)
 
+	selPane.table.SetSelectionChangedFunc(func(row, col int) {
+		rows := selPane.table.GetRowCount()
+
+		if row < 0 || row > rows {
+			return
+		}
+
+		cell := selPane.table.GetCell(row, col)
+
+		if cell == nil {
+			return
+		}
+
+		selPane.table.SetSelectedStyle(tcell.Style{}.
+			Background(cell.Color).
+			Foreground(tcell.Color16).
+			Attributes(cell.Attributes))
+	})
+
 	selPane.ChangeDir(false, false)
 }
 
@@ -358,20 +377,24 @@ func (p *dirPane) reselect(psel bool) {
 			p.updateDirPane(row, checksel, nil, dir)
 		}
 	}
+
+	pos, _ := p.table.GetSelection()
+	p.table.Select(pos, 0)
 }
 
 func (p *dirPane) updateDirPane(row int, sel bool, cells []*tview.TableCell, dir *adb.DirEntry) {
 	if cells != nil {
 		for col, cell := range cells {
-			color := setEntryColor(col, sel, cells[1].Text)
+			color, attr := setEntryColor(col, sel, cells[1].Text)
 
-			p.table.SetCell(row, col, cell.SetTextColor(color))
+			p.table.SetCell(row, col, cell.SetTextColor(color).
+				SetAttributes(attr))
 		}
 	} else {
 		entry := getListEntry(dir)
 
 		for col, dname := range entry {
-			color := setEntryColor(col, sel, entry[1])
+			color, attr := setEntryColor(col, sel, entry[1])
 
 			cell := tview.NewTableCell(dname)
 			cell.SetReference(dir)
@@ -385,7 +408,8 @@ func (p *dirPane) updateDirPane(row int, sel bool, cells []*tview.TableCell, dir
 				cell.SetSelectable(false)
 			}
 
-			p.table.SetCell(row, col, cell.SetTextColor(color))
+			p.table.SetCell(row, col, cell.SetTextColor(color).
+				SetAttributes(attr))
 		}
 	}
 }
