@@ -138,13 +138,13 @@ func startOperation(srcPane, dstPane *dirPane, opmode opsMode, overwrite bool, m
 			break
 		}
 
-		if err = addOpsPath(src, dst); err != nil {
-			break
-		}
-
 		op.transfer = transfermode(opmode, msel.smode, dstPane.mode)
 
 		if err = op.setNewProgress(src, dst, sel, total); err != nil {
+			break
+		}
+
+		if err = addOpsPath(src, dst); err != nil {
 			break
 		}
 
