@@ -3,8 +3,10 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 )
@@ -66,6 +68,25 @@ func main() {
 	jobNum = 0
 	selected = false
 	multiselection = make(map[string]ifaceMode)
+
+	sig := make(chan os.Signal, 1)
+	signal.Notify(
+		sig,
+		os.Interrupt,
+		syscall.SIGHUP,
+		syscall.SIGQUIT,
+		syscall.SIGTERM,
+	)
+
+	go func(s chan os.Signal) {
+		switch <-s {
+		case os.Interrupt:
+			return
+		default:
+			stopUI()
+			return
+		}
+	}(sig)
 
 	setupUI()
 }

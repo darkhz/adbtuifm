@@ -1,12 +1,17 @@
 package main
 
 import (
+	"bufio"
 	"context"
+	"fmt"
+	"os"
+	"os/exec"
 	"strings"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	"golang.org/x/term"
 )
 
 var (
@@ -387,5 +392,111 @@ func (p *dirPane) showChangeDirInput() {
 	})
 
 	statuspgs.AddAndSwitchToPage("cdinput", input, true)
+	app.SetFocus(input)
+}
+
+func execCommand() {
+	imode := "Local"
+	emode := "Foreground"
+
+	input := getStatusInput("", false)
+
+	exit := func() {
+		statuspgs.SwitchToPage("statusmsg")
+		app.SetFocus(prevPane.table)
+	}
+
+	inputlabel := func() {
+		label := fmt.Sprintf("[::b]Exec (%s, %s): ", imode, emode)
+		input.SetLabel(label)
+	}
+
+	cmdexec := func(cmdtext string) {
+		if cmdtext == "" {
+			return
+		}
+
+		shell := os.Getenv("SHELL")
+		if shell == "" {
+			shell = "sh"
+		}
+
+		if imode == "Adb" {
+			if !checkAdb() {
+				return
+			}
+
+			cmdtext = "adb shell " + cmdtext
+		}
+
+		cmd := exec.Command(shell, "-c", cmdtext)
+
+		if emode == "Background" {
+			cmd.Start()
+			return
+		}
+
+		app.Suspend(func() {
+			cmd.Stdin = os.Stdin
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+
+			defer func() {
+				fmt.Printf("\n")
+
+				cmd.Stdin = nil
+				cmd.Stdout = nil
+				cmd.Stderr = nil
+			}()
+
+			cmd.Run()
+
+			fmt.Printf("\n[ Exited, press any key to continue ]\n")
+
+			state, err := term.MakeRaw(int(os.Stdin.Fd()))
+			if err != nil {
+				return
+			}
+			defer term.Restore(int(os.Stdin.Fd()), state)
+
+			bio := bufio.NewReader(os.Stdin)
+			_, _ = bio.ReadByte()
+		})
+	}
+
+	input.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyCtrlA:
+			if imode == "Local" {
+				imode = "Adb"
+			} else {
+				imode = "Local"
+			}
+
+			inputlabel()
+
+		case tcell.KeyCtrlQ:
+			if emode == "Foreground" {
+				emode = "Background"
+			} else {
+				emode = "Foreground"
+			}
+
+			inputlabel()
+
+		case tcell.KeyEnter:
+			cmdexec(input.GetText())
+			fallthrough
+
+		case tcell.KeyEscape:
+			exit()
+		}
+
+		return event
+	})
+
+	inputlabel()
+
+	statuspgs.AddAndSwitchToPage("exec", input, true)
 	app.SetFocus(input)
 }

@@ -216,6 +216,9 @@ func setupPane(selPane, auxPane *dirPane) {
 		case ']':
 			swapPanes(selPane, auxPane)
 
+		case '!':
+			execCommand()
+
 		case 'A', 'a', ',':
 			multiselect(selPane, event.Rune())
 
@@ -514,8 +517,12 @@ func stopApp() {
 	quitmsg += " (y/n)?"
 
 	showConfirmMsg(quitmsg, false, func() {
-		app.Stop()
-		stopStatus()
-		cancelAllOps()
+		stopUI()
 	}, func() {})
+}
+
+func stopUI() {
+	app.Stop()
+	stopStatus()
+	cancelAllOps()
 }
