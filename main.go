@@ -67,6 +67,7 @@ func main() {
 
 	jobNum = 0
 	selected = false
+	openFiles = make(map[string]struct{})
 	multiselection = make(map[string]ifaceMode)
 
 	sig := make(chan os.Signal, 1)

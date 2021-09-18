@@ -98,8 +98,9 @@ func newOperation(opmode opsMode) operation {
 	}
 }
 
-func startOperation(srcPane, dstPane *dirPane, opmode opsMode, overwrite bool, mselect []selection) {
+func startOperation(srcPane, dstPane *dirPane, opmode opsMode, overwrite bool, mselect []selection) (string, error) {
 	var err error
+	var src, dst string
 
 	total := len(mselect)
 
@@ -108,15 +109,22 @@ func startOperation(srcPane, dstPane *dirPane, opmode opsMode, overwrite bool, m
 	op.opSetStatus(opInProgress, nil)
 
 	for sel, msel := range mselect {
-		var src, dst string
-
 		src = msel.path
 		dpath := dstPane.getPath()
 
 		if opmode == opRename {
 			dst = mrinput
 		} else {
-			dst = filepath.Join(dpath, filepath.Base(src))
+			if dstPane.table == nil {
+				dst = dpath
+			} else {
+				dst = filepath.Join(dpath, filepath.Base(src))
+			}
+		}
+
+		if isOpen(src, dst, dstPane.table != nil) {
+			err = fmt.Errorf("'%s' is open", filepath.Base(src))
+			break
 		}
 
 		if opmode == opCopy && !overwrite {
@@ -158,7 +166,12 @@ func startOperation(srcPane, dstPane *dirPane, opmode opsMode, overwrite bool, m
 	op.opSetStatus(opDone, err)
 
 	srcPane.ChangeDir(false, false)
-	dstPane.ChangeDir(false, false)
+
+	if dstPane.table != nil {
+		dstPane.ChangeDir(false, false)
+	}
+
+	return dst, err
 }
 
 func transfermode(opmode opsMode, srcMode, dstMode ifaceMode) transferMode {
@@ -233,6 +246,10 @@ func altPath(src, dst string, iface ifaceMode) (string, error) {
 	}
 
 	return dst, nil
+}
+
+func isOpen(src, dst string, table bool) bool {
+	return (checkOpen(src) || checkOpen(dst)) && table
 }
 
 func isSamePath(src, dst string, opmode opsMode) error {

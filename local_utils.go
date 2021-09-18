@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -11,6 +13,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	adb "github.com/zach-klippenstein/goadb"
+	"golang.org/x/term"
 )
 
 var pathLock sync.Mutex
@@ -318,4 +321,49 @@ func setEntryColor(col int, sel bool, perms string) (tcell.Color, tcell.AttrMask
 	}
 
 	return tcell.ColorWhite, tcell.AttrNone
+}
+
+func execCmd(cmdtext, emode string) (*exec.Cmd, error) {
+	var err error
+
+	shell := os.Getenv("SHELL")
+	if shell == "" {
+		shell = "sh"
+	}
+
+	cmd := exec.Command(shell, "-c", cmdtext)
+
+	if emode == "Background" {
+		err = cmd.Start()
+		return cmd, err
+	}
+
+	app.Suspend(func() {
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		defer func() {
+			fmt.Printf("\n")
+
+			cmd.Stdin = nil
+			cmd.Stdout = nil
+			cmd.Stderr = nil
+		}()
+
+		cmd.Run()
+
+		fmt.Printf("\n[ Exited, press any key to continue ]\n")
+
+		state, err := term.MakeRaw(int(os.Stdin.Fd()))
+		if err != nil {
+			return
+		}
+		defer term.Restore(int(os.Stdin.Fd()), state)
+
+		bio := bufio.NewReader(os.Stdin)
+		_, _ = bio.ReadByte()
+	})
+
+	return cmd, err
 }

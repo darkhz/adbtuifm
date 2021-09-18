@@ -1,9 +1,12 @@
 package main
 
 import (
+	"fmt"
+	"os"
 	"path/filepath"
 	"sync"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/rivo/tview"
 )
 
@@ -14,7 +17,9 @@ type selection struct {
 
 var (
 	selected       bool
+	openLock       sync.Mutex
 	selectLock     sync.RWMutex
+	openFiles      map[string]struct{}
 	multiselection map[string]ifaceMode
 )
 
@@ -153,6 +158,126 @@ func (p *dirPane) multiSelectHandler(all, inverse bool, totalrows int) {
 	}
 
 	p.table.Select(pos, 0)
+}
+
+func (p *dirPane) openFileHandler() {
+	p.updateRef(true)
+
+	if p.entry.Mode.IsDir() {
+		return
+	}
+
+	name := p.entry.Name
+	tpath := filepath.Join("/tmp", name)
+	fpath := filepath.Join(p.getPath(), name)
+
+	showInfoMsg(fmt.Sprintf("Transferring '%s', check operations view", name))
+
+	tmpdst, err := startOperation(
+		p,
+		&dirPane{path: tpath, mode: mLocal},
+		opCopy,
+		false,
+		[]selection{{fpath, p.mode}},
+	)
+	if err != nil {
+		showErrorMsg(
+			fmt.Errorf("Unable to open '%s': %s", name, err.Error()),
+			false,
+		)
+		return
+	}
+	defer os.Remove(tmpdst)
+
+	if checkOpen(fpath) {
+		showInfoMsg(fmt.Sprintf("Waiting for process to finish with '%s'", name))
+		return
+	}
+	setOpen(fpath, false)
+	defer setOpen(fpath, true)
+
+	showInfoMsg("Opening " + name)
+
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		showErrorMsg(fmt.Errorf("Cannot monitor changes on '%s'", name), false)
+		return
+	}
+
+	err = watcher.Add(tmpdst)
+	if err != nil {
+		showErrorMsg(fmt.Errorf("Error monitoring '%s'", name), false)
+		return
+	}
+	defer watcher.Close()
+
+	modify := make(chan bool)
+	defer close(modify)
+
+	go func() {
+		select {
+		case _, ok := <-watcher.Events:
+			if !ok {
+				return
+			}
+
+			modify <- true
+		}
+	}()
+
+	cmd, err := execCmd(fmt.Sprintf("xdg-open '%s'", tmpdst), "Background")
+	if err != nil {
+		showErrorMsg(err, false)
+		return
+	}
+
+	err = cmd.Wait()
+	if err != nil {
+		showErrorMsg(err, false)
+		return
+	}
+
+	select {
+	case <-modify:
+		showInfoMsg(fmt.Sprintf("Overwriting modified '%s'", name))
+
+		_, err = startOperation(
+			p,
+			&dirPane{path: fpath, mode: p.mode},
+			opCopy,
+			true,
+			[]selection{{tmpdst, mLocal}},
+		)
+		if err != nil {
+			showErrorMsg(
+				fmt.Errorf("Unable to save '%s': %s", name, err.Error()),
+				false,
+			)
+		}
+
+	default:
+	}
+}
+
+func checkOpen(fpath string) bool {
+	openLock.Lock()
+	defer openLock.Unlock()
+
+	_, ok := openFiles[fpath]
+
+	return ok
+}
+
+func setOpen(fpath string, del bool) {
+	openLock.Lock()
+	defer openLock.Unlock()
+
+	if del {
+		delete(openFiles, fpath)
+		return
+	}
+
+	openFiles[fpath] = struct{}{}
 }
 
 func checkSelected(panepath, dirname string, rm bool) bool {

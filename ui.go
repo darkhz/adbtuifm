@@ -169,6 +169,9 @@ func setupPane(selPane, auxPane *dirPane) {
 		case tcell.KeyTab:
 			paneswitch(selPane, auxPane)
 
+		case tcell.KeyCtrlO:
+			go selPane.openFileHandler()
+
 		case tcell.KeyCtrlR:
 			selPane.reselect(false)
 

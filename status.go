@@ -1,17 +1,13 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"fmt"
-	"os"
-	"os/exec"
 	"strings"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
-	"golang.org/x/term"
 )
 
 var (
@@ -416,11 +412,6 @@ func execCommand() {
 			return
 		}
 
-		shell := os.Getenv("SHELL")
-		if shell == "" {
-			shell = "sh"
-		}
-
 		if imode == "Adb" {
 			if !checkAdb() {
 				return
@@ -429,39 +420,7 @@ func execCommand() {
 			cmdtext = "adb shell " + cmdtext
 		}
 
-		cmd := exec.Command(shell, "-c", cmdtext)
-
-		if emode == "Background" {
-			cmd.Start()
-			return
-		}
-
-		app.Suspend(func() {
-			cmd.Stdin = os.Stdin
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
-
-			defer func() {
-				fmt.Printf("\n")
-
-				cmd.Stdin = nil
-				cmd.Stdout = nil
-				cmd.Stderr = nil
-			}()
-
-			cmd.Run()
-
-			fmt.Printf("\n[ Exited, press any key to continue ]\n")
-
-			state, err := term.MakeRaw(int(os.Stdin.Fd()))
-			if err != nil {
-				return
-			}
-			defer term.Restore(int(os.Stdin.Fd()), state)
-
-			bio := bufio.NewReader(os.Stdin)
-			_, _ = bio.ReadByte()
-		})
+		execCmd(cmdtext, emode)
 	}
 
 	input.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
