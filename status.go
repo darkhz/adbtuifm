@@ -194,7 +194,7 @@ func showConfirmMsg(msg string, alert bool, doFunc, resetFunc func()) {
 }
 
 func (p *dirPane) showFilterInput() {
-	input := getStatusInput("Filter:", false)
+	input := getStatusInput("Filter entries:", false)
 
 	exit := func() {
 		statuspgs.SwitchToPage("statusmsg")
@@ -388,6 +388,18 @@ func (p *dirPane) showChangeDirInput() {
 	})
 
 	statuspgs.AddAndSwitchToPage("cdinput", input, true)
+	app.SetFocus(input)
+}
+
+func showEditSelections(sinput *tview.InputField) {
+	input := getStatusInput("Filter selections:", false)
+
+	input = editSelections(input, sinput)
+	if input == nil {
+		return
+	}
+
+	statuspgs.AddAndSwitchToPage("editsel", input, true)
 	app.SetFocus(input)
 }
 

@@ -122,12 +122,11 @@ func showHelpModal() {
 }
 
 //gocyclo:ignore
-func showEditSelections(status *tview.InputField) {
+func editSelections(input, sinput *tview.InputField) *tview.InputField {
 	if len(multiselection) == 0 {
-		return
+		return nil
 	}
 
-	var focus bool
 	var row, width int
 
 	empty := struct{}{}
@@ -135,29 +134,35 @@ func showEditSelections(status *tview.InputField) {
 
 	seltable := tview.NewTable()
 
-	input := tview.NewInputField()
-	input.SetLabel("Filter: ")
-
 	flex := tview.NewFlex().
-		AddItem(input, 0, 2, false).
 		AddItem(seltable, 0, 10, false).
 		SetDirection(tview.FlexRow)
+
+	reset := func(p tview.Primitive, spage string) {
+		app.SetFocus(p)
+		statuspgs.SwitchToPage(spage)
+
+		if spage == "confirm" {
+			return
+		}
+
+		prevPane.table.SetSelectable(true, false)
+	}
 
 	exit := func() {
 		pages.SwitchToPage("main")
 
-		if status != nil {
-			if len(multiselection) == 0 {
-				statuspgs.SwitchToPage("statusmsg")
-				app.SetFocus(prevPane.table)
-				return
-			}
+		sel := len(multiselection) != 0
 
-			app.SetFocus(status)
+		switch {
+		case sinput != nil && sel:
+			reset(sinput, "confirm")
 
-		} else {
-			app.SetFocus(prevPane.table)
-			prevPane.table.SetSelectable(true, false)
+		case sinput != nil && !sel:
+			fallthrough
+
+		default:
+			reset(prevPane.table, "statusmsg")
 		}
 	}
 
@@ -174,19 +179,10 @@ func showEditSelections(status *tview.InputField) {
 		exit()
 	}
 
-	focustoggle := func() {
-		if !focus {
-			focus = true
-			app.SetFocus(input)
-		} else {
-			focus = false
-			app.SetFocus(seltable)
-		}
-	}
-
 	seltoggle := func(a, i bool) {
 		var color tcell.Color
 
+		pos, _ := seltable.GetSelection()
 		totalrows := seltable.GetRowCount()
 
 		one := !a && !i
@@ -199,28 +195,31 @@ func showEditSelections(status *tview.InputField) {
 
 			cell := seltable.GetCell(row, 0)
 
-			selpath := cell.Text
+			selpath := strings.TrimPrefix(cell.Text, "[::b]")
 
 			_, ok := delpaths[selpath]
 
 			if !ok && (one || inv) {
-				color = tcell.ColorSkyblue
+				color = tcell.ColorSteelBlue
 				delpaths[selpath] = empty
 			} else {
-				color = tcell.ColorOrange
+				color = tcell.ColorOrangeRed
 				delete(delpaths, selpath)
 			}
 
 			seltable.SetCell(row, 0, cell.SetTextColor(color))
 
-			if row+1 < totalrows && one {
-				seltable.Select(row+1, 0)
-			}
-
 			if one {
-				return
+				if row+1 < totalrows {
+					seltable.Select(row+1, 0)
+					return
+				}
+
+				break
 			}
 		}
+
+		seltable.Select(pos, 0)
 	}
 
 	markselected := func(i int, name string) {
@@ -229,12 +228,12 @@ func showEditSelections(status *tview.InputField) {
 		_, ok := delpaths[name]
 
 		if !ok {
-			color = tcell.ColorOrange
+			color = tcell.ColorOrangeRed
 		} else {
-			color = tcell.ColorSkyblue
+			color = tcell.ColorSteelBlue
 		}
 
-		seltable.SetCell(i, 0, tview.NewTableCell(name).SetTextColor(color))
+		seltable.SetCell(i, 0, tview.NewTableCell("[::b]"+name).SetTextColor(color))
 	}
 
 	input.SetChangedFunc(func(text string) {
@@ -248,6 +247,11 @@ func showEditSelections(status *tview.InputField) {
 
 			seltable.Select(0, 0)
 			seltable.ScrollToBeginning()
+
+			if pg, _ := pages.GetFrontPage(); pg != "modal" {
+				pages.SwitchToPage("modal").ShowPage("main")
+				app.SetFocus(input)
+			}
 
 			return
 		}
@@ -264,21 +268,28 @@ func showEditSelections(status *tview.InputField) {
 			}
 		}
 
+		if row == 0 {
+			pages.HidePage("modal")
+		} else {
+			if pg, _ := pages.GetFrontPage(); pg != "modal" {
+				pages.SwitchToPage("modal").ShowPage("main")
+			}
+		}
+
+		app.SetFocus(input)
+
 		seltable.Select(0, 0)
 		seltable.ScrollToBeginning()
 	})
 
 	input.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
-		case tcell.KeyEscape:
-			exit()
+		default:
+			seltable.InputHandler()(event, nil)
 
-		case tcell.KeyCtrlS:
-			save()
-
-		case tcell.KeyTab:
-			focustoggle()
-			seltable.SetSelectable(true, false)
+			if event.Modifiers() == tcell.ModAlt {
+				return nil
+			}
 		}
 
 		return event
@@ -291,10 +302,10 @@ func showEditSelections(status *tview.InputField) {
 
 		case tcell.KeyCtrlS:
 			save()
+		}
 
-		case tcell.KeyTab:
-			focustoggle()
-			seltable.SetSelectable(false, false)
+		if event.Modifiers() != tcell.ModAlt {
+			return event
 		}
 
 		switch event.Rune() {
@@ -306,13 +317,29 @@ func showEditSelections(status *tview.InputField) {
 
 		case 'A':
 			seltoggle(true, false)
-
-		case '/':
-			focustoggle()
-			seltable.SetSelectable(false, false)
 		}
 
 		return event
+	})
+
+	seltable.SetSelectionChangedFunc(func(row, col int) {
+		rows := seltable.GetRowCount()
+
+		if row < 0 || row > rows {
+			return
+		}
+
+		cell := seltable.GetCell(row, col)
+
+		if cell == nil {
+			return
+		}
+
+		seltable.SetSelectedStyle(tcell.Style{}.
+			Bold(true).
+			Underline(true).
+			Background(cell.Color).
+			Foreground(tcell.ColorLightGrey))
 	})
 
 	selectLock.RLock()
@@ -323,8 +350,8 @@ func showEditSelections(status *tview.InputField) {
 			width = pathlen
 		}
 
-		seltable.SetCell(row, 0, tview.NewTableCell(spath).
-			SetTextColor(tcell.ColorOrange))
+		seltable.SetCell(row, 0, tview.NewTableCell("[::b]"+spath).
+			SetTextColor(tcell.ColorOrangeRed))
 
 		row++
 	}
@@ -334,20 +361,35 @@ func showEditSelections(status *tview.InputField) {
 		width = 50
 	}
 
+	seltable.Select(0, 0)
 	seltable.SetSelectable(true, false)
+	seltable.SetBackgroundColor(tcell.ColorLightGrey)
 
-	flex.SetBorder(true)
-	flex.SetTitle("[ EDIT SELECTION ]")
+	pages.AddAndSwitchToPage("modal", field(flex, width+6, 10), true).ShowPage("main")
 
-	pages.AddAndSwitchToPage("modal", field(flex, width+6, 23), true).ShowPage("main")
-	app.SetFocus(seltable)
+	return input
 }
 
 func field(v tview.Primitive, width, height int) tview.Primitive {
-	return tview.NewGrid().
-		SetColumns(0, width, 0).
-		SetRows(0, height, 0).
-		AddItem(v, 1, 1, 1, 1, 0, 0, true)
+	modal := tview.NewFlex().
+		AddItem(nil, 0, 1, false).
+		AddItem(v, height, 1, false).
+		AddItem(nil, 1, 1, false).
+		SetDirection(tview.FlexRow)
+
+	flex := tview.NewFlex().
+		AddItem(nil, 0, 1, false).
+		AddItem(modal, width+2, 1, false).
+		AddItem(nil, 0, 1, false)
+
+	app.SetBeforeDrawFunc(func(t tcell.Screen) bool {
+		width, _ := t.Size()
+		flex.ResizeItem(modal, width, 0)
+
+		return false
+	})
+
+	return flex
 }
 
 func modal(v, b, c tview.Primitive, color tcell.Color, width, height int) tview.Primitive {
