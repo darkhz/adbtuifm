@@ -325,13 +325,18 @@ func setEntryColor(col int, sel bool, perms string) (tcell.Color, tcell.AttrMask
 
 func execCmd(cmdtext, emode string) (*exec.Cmd, error) {
 	var err error
+	var cmd *exec.Cmd
 
 	shell := os.Getenv("SHELL")
 	if shell == "" {
 		shell = "sh"
 	}
 
-	cmd := exec.Command(shell, "-c", cmdtext)
+	if cmdtext == "" {
+		cmd = exec.Command(shell)
+	} else {
+		cmd = exec.Command(shell, "-c", cmdtext)
+	}
 
 	if emode == "Background" {
 		err = cmd.Start()

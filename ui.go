@@ -57,6 +57,18 @@ func setupUI() {
 
 	pages.SwitchToPage("main")
 
+	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyCtrlC:
+			return nil
+
+		case tcell.KeyCtrlD:
+			execCmd("", "Foreground")
+		}
+
+		return event
+	})
+
 	if err := app.SetRoot(pages, true).SetFocus(prevPane.table).Run(); err != nil {
 		panic(err)
 	}
