@@ -288,6 +288,7 @@ func showMkdirRenameInput(selPane, auxPane *dirPane, key rune) {
 	}
 
 	input := getStatusInput(title, false)
+	input.SetText(origname)
 
 	input.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
