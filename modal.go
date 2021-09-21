@@ -1,6 +1,7 @@
 package main
 
 import (
+	"path/filepath"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
@@ -119,6 +120,189 @@ func showHelpModal() {
 	pages.AddAndSwitchToPage("modal", help, true).ShowPage("main")
 
 	app.SetFocus(okbtn)
+}
+
+//gocyclo:ignore
+func changeDirSelect(pane *dirPane, input *tview.InputField) {
+	var entries []string
+	var cdfilter, cdrefresh bool
+
+	cdtable := tview.NewTable()
+
+	flex := tview.NewFlex().
+		AddItem(cdtable, 0, 10, false).
+		SetDirection(tview.FlexRow)
+
+	infomsg := func(cdpath string) {
+		if pane.path == cdpath {
+			return
+		}
+
+		showInfoMsg("Changing directory to " + cdpath)
+	}
+
+	autocompletefunc := func(current string, refresh bool) {
+		var row int
+
+		if len(current) == 0 {
+			return
+		}
+
+		cdfilter = true
+
+		switch pane.mode {
+		case mAdb:
+			entries, _ = pane.adbListDir(current, true)
+		case mLocal:
+			entries, _ = pane.localListDir(current, true)
+		}
+
+		if entries == nil {
+			r, _ := cdtable.GetSelection()
+			cdtable.Select(r, 0)
+
+			return
+		}
+
+		cdtable.Clear()
+
+		for _, entry := range entries {
+			if strings.Index(entry, current) != -1 {
+				cdtable.SetCell(row, 0, tview.NewTableCell("[::b]"+entry).
+					SetTextColor(tcell.ColorSteelBlue))
+
+				row++
+			}
+		}
+
+		cdrefresh = refresh
+
+		cdtable.Select(0, 0)
+		cdtable.ScrollToBeginning()
+
+		cdrefresh = false
+	}
+
+	filter := func(current string) {
+		var row int
+
+		if entries == nil {
+			return
+		}
+
+		cdtable.Clear()
+
+		for _, entry := range entries {
+			if strings.HasPrefix(entry, current) {
+				cdtable.SetCell(row, 0, tview.NewTableCell("[::b]"+entry).
+					SetTextColor(tcell.ColorSteelBlue))
+
+				row++
+			}
+		}
+
+		if row == 0 {
+			pages.HidePage("modal")
+		} else {
+			if pg, _ := pages.GetFrontPage(); pg != "modal" {
+				pages.SwitchToPage("modal").ShowPage("main")
+			}
+		}
+		app.SetFocus(input)
+
+		cdrefresh = true
+
+		cdtable.Select(0, 0)
+		cdtable.ScrollToBeginning()
+
+		cdrefresh = false
+	}
+
+	input.SetChangedFunc(func(text string) {
+		if cdfilter {
+			return
+		}
+
+		filter(text)
+
+		if cdtable.GetRowCount() == 0 {
+			autocompletefunc(text, true)
+		}
+	})
+
+	input.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyTab:
+			autocompletefunc(input.GetText(), false)
+
+		case tcell.KeyEnter:
+			infomsg(input.GetText())
+			pane.ChangeDir(false, false, input.GetText())
+			fallthrough
+
+		case tcell.KeyEscape:
+			pages.SwitchToPage("main")
+			statuspgs.SwitchToPage("statusmsg")
+			app.SetFocus(pane.table)
+
+		case tcell.KeyBackspace, tcell.KeyBackspace2:
+			text := input.GetText()
+			filter(input.GetText())
+			autocompletefunc(filepath.Dir(text), true)
+
+		case tcell.KeyCtrlW:
+			text := trimPath(input.GetText(), true)
+			input.SetText(text)
+			autocompletefunc(text, true)
+			return nil
+
+		case tcell.KeyDown, tcell.KeyUp:
+			cdfilter = true
+			fallthrough
+
+		case tcell.KeyPgDn, tcell.KeyPgUp:
+			cdtable.InputHandler()(event, nil)
+			return nil
+		}
+
+		switch event.Rune() {
+		default:
+			cdfilter = false
+		}
+
+		return event
+	})
+
+	cdtable.SetSelectionChangedFunc(func(row, _ int) {
+		if cdrefresh || row < 0 {
+			return
+		}
+
+		cell := cdtable.GetCell(row, 0)
+		if cell == nil {
+			return
+		}
+
+		if cell.Text == "" {
+			return
+		}
+
+		input.SetText(strings.TrimPrefix(cell.Text, "[::b]"))
+
+		cdtable.SetSelectedStyle(tcell.Style{}.
+			Bold(true).
+			Underline(true).
+			Background(cell.Color).
+			Foreground(tcell.ColorLightGrey))
+	})
+
+	autocompletefunc(pane.getPath(), false)
+
+	cdtable.Select(0, 0)
+	cdtable.SetSelectable(true, false)
+	cdtable.SetBackgroundColor(tcell.ColorLightGrey)
+
+	pages.AddAndSwitchToPage("modal", field(flex, 56, 10), true).ShowPage("main")
 }
 
 //gocyclo:ignore

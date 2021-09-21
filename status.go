@@ -320,72 +320,7 @@ func (p *dirPane) showChangeDirInput() {
 	input := getStatusInput("Change Directory to:", false)
 	input.SetText(p.path)
 
-	infomsg := func(cdpath string) {
-		msgchan <- "Changing directory to " + cdpath
-	}
-
-	input.SetAutocompleteFunc(func(current string) (entries []string) {
-		var tmpentry []string
-
-		if len(current) == 0 {
-			return
-		}
-
-		switch p.mode {
-		case mAdb:
-			tmpentry, _ = p.adbListDir(current, true)
-		case mLocal:
-			tmpentry, _ = p.localListDir(current, true)
-		}
-
-		if tmpentry != nil {
-			entrycache = tmpentry
-		} else {
-			tmpentry = entrycache
-		}
-
-		for _, ent := range tmpentry {
-			if strings.Index(ent, current) != -1 {
-				entries = append(entries, ent)
-			}
-		}
-
-		return
-	})
-
-	input.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		switch event.Key() {
-		case tcell.KeyTab:
-			input.Autocomplete()
-
-		case tcell.KeyEnter:
-			infomsg(input.GetText())
-			p.ChangeDir(false, false, input.GetText())
-			fallthrough
-
-		case tcell.KeyEscape:
-			statuspgs.SwitchToPage("statusmsg")
-			app.SetFocus(p.table)
-
-		case tcell.KeyCtrlW:
-			input.SetText(trimPath(input.GetText(), true))
-			input.Autocomplete()
-			return nil
-
-		case tcell.KeyBackspace, tcell.KeyBackspace2:
-			fallthrough
-
-		case tcell.KeyDown, tcell.KeyUp, tcell.KeyLeft, tcell.KeyRight:
-			return event
-		}
-
-		switch event.Rune() {
-		default:
-			input.Autocomplete()
-		}
-
-		return event
-	})
+	changeDirSelect(p, input)
 
 	statuspgs.AddAndSwitchToPage("cdinput", input, true)
 	app.SetFocus(input)
