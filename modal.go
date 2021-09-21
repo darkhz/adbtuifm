@@ -493,7 +493,7 @@ func editSelections(input, sinput *tview.InputField) *tview.InputField {
 		}
 
 		switch event.Rune() {
-		case ',':
+		case ' ':
 			seltoggle(false, false)
 
 		case 'a':

@@ -222,7 +222,7 @@ func setupPane(selPane, auxPane *dirPane) {
 		case '!':
 			execCommand()
 
-		case 'A', 'a', ',':
+		case 'A', 'a', ' ':
 			multiselect(selPane, event.Rune())
 
 		case 'm', 'p', 'P', 'd':
@@ -346,7 +346,7 @@ func multiselect(selPane *dirPane, key rune) {
 		all = false
 		inverse = true
 
-	case ',':
+	case ' ':
 		all = false
 		inverse = false
 	}
