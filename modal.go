@@ -116,8 +116,8 @@ func showHelpModal() {
 		return event
 	})
 
-	help := modal(helpview, okbtn, nil, tcell.ColorGrey, 50, 24)
-	pages.AddAndSwitchToPage("modal", help, true).ShowPage("main")
+	help := centermodal(helpview, okbtn, "[ HELP ]", 50, 24)
+	pages.AddAndSwitchToPage("centermodal", help, true).ShowPage("main")
 
 	app.SetFocus(okbtn)
 }
@@ -202,10 +202,10 @@ func changeDirSelect(pane *dirPane, input *tview.InputField) {
 		}
 
 		if row == 0 {
-			pages.HidePage("modal")
+			pages.HidePage("cdmodal")
 		} else {
-			if pg, _ := pages.GetFrontPage(); pg != "modal" {
-				pages.SwitchToPage("modal").ShowPage("main")
+			if pg, _ := pages.GetFrontPage(); pg != "cdmodal" {
+				pages.SwitchToPage("cdmodal").ShowPage("main")
 			}
 		}
 		app.SetFocus(input)
@@ -302,7 +302,7 @@ func changeDirSelect(pane *dirPane, input *tview.InputField) {
 	cdtable.SetSelectable(true, false)
 	cdtable.SetBackgroundColor(tcell.ColorLightGrey)
 
-	pages.AddAndSwitchToPage("modal", field(flex, 56, 10), true).ShowPage("main")
+	pages.AddAndSwitchToPage("cdmodal", statusmodal(flex), true).ShowPage("main")
 }
 
 //gocyclo:ignore
@@ -311,7 +311,7 @@ func editSelections(input, sinput *tview.InputField) *tview.InputField {
 		return nil
 	}
 
-	var row, width int
+	var row int
 
 	empty := struct{}{}
 	delpaths := make(map[string]struct{}, len(multiselection))
@@ -432,8 +432,8 @@ func editSelections(input, sinput *tview.InputField) *tview.InputField {
 			seltable.Select(0, 0)
 			seltable.ScrollToBeginning()
 
-			if pg, _ := pages.GetFrontPage(); pg != "modal" {
-				pages.SwitchToPage("modal").ShowPage("main")
+			if pg, _ := pages.GetFrontPage(); pg != "editmodal" {
+				pages.SwitchToPage("editmodal").ShowPage("main")
 				app.SetFocus(input)
 			}
 
@@ -453,10 +453,10 @@ func editSelections(input, sinput *tview.InputField) *tview.InputField {
 		}
 
 		if row == 0 {
-			pages.HidePage("modal")
+			pages.HidePage("editmodal")
 		} else {
-			if pg, _ := pages.GetFrontPage(); pg != "modal" {
-				pages.SwitchToPage("modal").ShowPage("main")
+			if pg, _ := pages.GetFrontPage(); pg != "editmodal" {
+				pages.SwitchToPage("editmodal").ShowPage("main")
 			}
 		}
 
@@ -528,12 +528,6 @@ func editSelections(input, sinput *tview.InputField) *tview.InputField {
 
 	selectLock.RLock()
 	for spath := range multiselection {
-		pathlen := len(spath)
-
-		if pathlen > width {
-			width = pathlen
-		}
-
 		seltable.SetCell(row, 0, tview.NewTableCell("[::b]"+spath).
 			SetTextColor(tcell.ColorOrangeRed))
 
@@ -541,20 +535,19 @@ func editSelections(input, sinput *tview.InputField) *tview.InputField {
 	}
 	selectLock.RUnlock()
 
-	if width < 50 {
-		width = 50
-	}
-
 	seltable.Select(0, 0)
 	seltable.SetSelectable(true, false)
 	seltable.SetBackgroundColor(tcell.ColorLightGrey)
 
-	pages.AddAndSwitchToPage("modal", field(flex, width+6, 10), true).ShowPage("main")
+	pages.AddAndSwitchToPage("editmodal", statusmodal(flex), true).ShowPage("main")
 
 	return input
 }
 
-func field(v tview.Primitive, width, height int) tview.Primitive {
+func statusmodal(v tview.Primitive) tview.Primitive {
+	_, _, _, height := pages.GetRect()
+	height /= 4
+
 	modal := tview.NewFlex().
 		AddItem(nil, 0, 1, false).
 		AddItem(v, height, 1, false).
@@ -563,7 +556,7 @@ func field(v tview.Primitive, width, height int) tview.Primitive {
 
 	flex := tview.NewFlex().
 		AddItem(nil, 0, 1, false).
-		AddItem(modal, width+2, 1, false).
+		AddItem(modal, 10, 1, false).
 		AddItem(nil, 0, 1, false)
 
 	app.SetBeforeDrawFunc(func(t tcell.Screen) bool {
@@ -576,41 +569,20 @@ func field(v tview.Primitive, width, height int) tview.Primitive {
 	return flex
 }
 
-func modal(v, b, c tview.Primitive, color tcell.Color, width, height int) tview.Primitive {
-	var title string
+func centermodal(v, b tview.Primitive, title string, width, height int) tview.Primitive {
+	items := tview.NewFlex().
+		AddItem(nil, 0, 1, false).
+		AddItem(v, height, 1, false).
+		AddItem(b, 1, 1, false).
+		AddItem(nil, 0, 1, false).
+		SetDirection(tview.FlexRow)
 
-	items := tview.NewFlex()
-
-	items.AddItem(nil, 0, 1, false)
-	items.AddItem(v, height, 1, false)
-
-	if c != nil {
-		items.AddItem(c, 1, 1, false)
-	}
-
-	items.AddItem(b, 1, 1, false)
-	items.AddItem(nil, 0, 1, false)
-	items.SetDirection(tview.FlexRow)
-
-	switch color {
-	case tcell.ColorGrey:
-		title = "[ HELP ]"
-		height = height + 3
-
-	case tcell.ColorBlack:
-		title = "[ ERROR ]"
-		height = height + 3
-
-	default:
-		title = "[ INFO ]"
-		height = height + 4
-	}
+	height += 3
 
 	items.SetBorder(true)
 	items.SetTitle(title)
-	items.SetBackgroundColor(color)
 
-	modal := tview.NewFlex().
+	centermodal := tview.NewFlex().
 		AddItem(nil, 0, 1, false).
 		AddItem(items, height, 1, false).
 		AddItem(nil, 0, 1, false).
@@ -618,6 +590,6 @@ func modal(v, b, c tview.Primitive, color tcell.Color, width, height int) tview.
 
 	return tview.NewFlex().
 		AddItem(nil, 0, 1, false).
-		AddItem(modal, width+2, 1, false).
+		AddItem(centermodal, width+2, 1, false).
 		AddItem(nil, 0, 1, false)
 }
