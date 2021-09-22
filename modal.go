@@ -25,21 +25,24 @@ func showHelpModal() {
 	Switch between ADB/Local      s, <
 	Change to any directory       g, >
 	Toggle hidden files           h, .
+	Execute command               !
 	Refresh                       r
 	Move                          m
 	Paste/Put                     p
 	Delete                        d
+	Open files                    Ctrl+o
 	Make directory                M
 	Rename files/folders          R
 	Filter entries                /
 	Clear filtered entries        Ctrl+r
-	Select one item               ,
+	Select one item               Space
 	Invert selection              a
 	Select all items              A
 	Edit selection list           S
 	Toggle layouts                [
 	Swap panes                    ]
 	Reset selections              Esc
+	Temporarily exit to shell     Ctrl+d
 	Quit                          q
 
 	OPERATIONS PAGE
@@ -49,7 +52,6 @@ func showHelpModal() {
 	Navigate between entries      Up, Down
 	Cancel selected operation     x
 	Cancel all operations         X
-	Clear operations list         C
 	Switch to main page           o, Esc
 
 	CHANGE DIRECTORY INPUT
@@ -57,37 +59,27 @@ func showHelpModal() {
 	Operation                     Key
 	---------                     ---
 	Navigate between entries      Up, Down
-	Autocomplete                  Tab, Any key
+	Autocomplete                  Tab
 	CD to highlighted entry       Enter
-	Move back a directory         Ctrl+W
+	Move back a directory         Ctrl+w
 	Switch to main page           Esc
-
-	MKDIR/RENAME INPUT
-	==================
-	Operation                     Key
-	---------                     ---
-	Mkdir/Rename                  Enter
-	Switch to main page           Esc
-
-	DIALOG BOXES
-	============
-	Operation                     Key
-	---------                     ---
-	Switch b/w textview, buttons  Left, Right
-	Scroll in textview            Up, Down
-	Select highlighted button     Enter
 
 	EDIT SELECTION DIALOG
 	=====================
 	Operation                     Key
 	---------                     ---
-	Select one item               ,
-	Invert selection              a
-	Select all items              A
-	Switch to input               /
-	Switch b/w input, list        Tab
+	Select one item               Alt+Space
+	Invert selection              Alt+a
+	Select all items              Alt+A
 	Save edited list              Ctrl+s
 	Cancel editing list           Esc
+
+	EXECUTION MODE
+	==============
+	Operation                     Key
+	---------                     ---
+	Switch b/w Local/Adb          Ctrl+a
+	Switch b/w FG/BG execution    Ctrl+q
 	`)
 
 	okbtn := tview.NewButton("Ok")
