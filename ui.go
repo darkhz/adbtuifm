@@ -34,8 +34,6 @@ var (
 	layoutToggle bool
 )
 
-const infocols = 3
-
 func newDirPane() *dirPane {
 	return &dirPane{
 		mode:   initMode,
@@ -103,10 +101,10 @@ func setupPaneView() *tview.Flex {
 		AddItem(statuspgs, 1, 0, true).
 		SetDirection(tview.FlexRow)
 
-	wrapFlex.SetBackgroundColor(tcell.Color16)
+	wrapFlex.SetBackgroundColor(tcell.ColorDefault)
 
-	selPane.table.SetBackgroundColor(tcell.Color16)
-	auxPane.table.SetBackgroundColor(tcell.Color16)
+	selPane.table.SetBackgroundColor(tcell.ColorDefault)
+	auxPane.table.SetBackgroundColor(tcell.ColorDefault)
 
 	return wrapStatus
 }
@@ -163,8 +161,8 @@ func setupOpsView() *tview.Table {
 	opsView.SetTitle("[::bu]Operations")
 	opsView.SetTitleAlign(tview.AlignLeft)
 
-	opsView.SetBorderColor(tcell.Color16)
-	opsView.SetBackgroundColor(tcell.Color16)
+	opsView.SetBorderColor(tcell.ColorDefault)
+	opsView.SetBackgroundColor(tcell.ColorDefault)
 
 	return opsView
 }
@@ -378,22 +376,9 @@ func (p *dirPane) reselect(psel bool) {
 	}
 	defer p.setUnlock()
 
-	if psel {
-		for row := 0; row < p.table.GetRowCount(); row++ {
-			cells := make([]*tview.TableCell, infocols)
-
-			for col := 0; col < infocols; col++ {
-				cells[col] = p.table.GetCell(row, col)
-			}
-
-			checksel := checkSelected(p.path, cells[0].Text, false)
-			p.updateDirPane(row, checksel, cells, nil)
-		}
-	} else {
-		for row, dir := range p.pathList {
-			checksel := checkSelected(p.path, dir.Name, false)
-			p.updateDirPane(row, checksel, nil, dir)
-		}
+	for row, dir := range p.pathList {
+		checksel := checkSelected(p.path, dir.Name, false)
+		p.updateDirPane(row, checksel, nil, dir)
 	}
 
 	pos, _ := p.table.GetSelection()
@@ -401,34 +386,29 @@ func (p *dirPane) reselect(psel bool) {
 }
 
 func (p *dirPane) updateDirPane(row int, sel bool, cells []*tview.TableCell, dir *adb.DirEntry) {
-	if cells != nil {
-		for col, cell := range cells {
-			color, attr := setEntryColor(col, sel, cells[1].Text)
+	entry := getListEntry(dir)
 
-			p.table.SetCell(row, col, cell.SetTextColor(color).
-				SetAttributes(attr))
+	for col, dname := range entry {
+		if !layoutToggle && col > 0 {
+			dname = ""
 		}
-	} else {
-		entry := getListEntry(dir)
 
-		for col, dname := range entry {
-			color, attr := setEntryColor(col, sel, entry[1])
+		color, attr := setEntryColor(col, sel, entry[1])
 
-			cell := tview.NewTableCell(dname)
-			cell.SetReference(dir)
+		cell := tview.NewTableCell(dname)
+		cell.SetReference(dir)
 
-			if col > 0 {
-				if col == 1 {
-					cell.SetExpansion(1)
-					cell.SetAlign(tview.AlignRight)
-				}
-
-				cell.SetSelectable(false)
+		if col > 0 {
+			if col == 1 {
+				cell.SetExpansion(1)
+				cell.SetAlign(tview.AlignRight)
 			}
 
-			p.table.SetCell(row, col, cell.SetTextColor(color).
-				SetAttributes(attr))
+			cell.SetSelectable(false)
 		}
+
+		p.table.SetCell(row, col, cell.SetTextColor(color).
+			SetAttributes(attr))
 	}
 }
 

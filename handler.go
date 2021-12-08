@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/rivo/tview"
+	adb "github.com/zach-klippenstein/goadb"
 )
 
 type selection struct {
@@ -118,12 +118,19 @@ func (p *dirPane) multiSelectHandler(all, inverse bool, totalrows int) {
 	mselinv := !all && inverse
 
 	for i := 0; i < totalrows; i++ {
+		var dir *adb.DirEntry
+
 		if mselone {
 			i, _ = p.table.GetSelection()
 		}
 
 		cell := p.table.GetCell(i, 0)
 		if cell.Text == "" {
+			return
+		}
+
+		ref := cell.GetReference()
+		if ref == nil {
 			return
 		}
 
@@ -138,14 +145,8 @@ func (p *dirPane) multiSelectHandler(all, inverse bool, totalrows int) {
 			addmsel(fullpath, p.mode)
 		}
 
-		cells := make([]*tview.TableCell, infocols)
-
-		cells[0] = cell
-		for col := 1; col < infocols; col++ {
-			cells[col] = p.table.GetCell(i, col)
-		}
-
-		p.updateDirPane(i, !checksel, cells, nil)
+		dir = ref.(*adb.DirEntry)
+		p.updateDirPane(i, !checksel, nil, dir)
 
 		if mselone {
 			if i+1 < totalrows {

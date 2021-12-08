@@ -73,8 +73,8 @@ func setupStatus() {
 
 	statuspgs.AddPage("statusmsg", statusmsg, true, true)
 
-	statusmsg.SetBackgroundColor(tcell.Color16)
-	statuspgs.SetBackgroundColor(tcell.Color16)
+	statusmsg.SetBackgroundColor(tcell.ColorDefault)
+	statuspgs.SetBackgroundColor(tcell.ColorDefault)
 
 	sctx, scancel = context.WithCancel(context.Background())
 
@@ -92,8 +92,8 @@ func getStatusInput(msg string, accept bool) *tview.InputField {
 	}
 
 	input.SetLabelColor(tcell.ColorWhite)
-	input.SetBackgroundColor(tcell.Color16)
-	input.SetFieldBackgroundColor(tcell.Color16)
+	input.SetBackgroundColor(tcell.ColorDefault)
+	input.SetFieldBackgroundColor(tcell.ColorDefault)
 
 	return input
 }

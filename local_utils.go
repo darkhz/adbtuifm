@@ -288,13 +288,13 @@ func setEntryColor(col int, sel bool, perms string) (tcell.Color, tcell.AttrMask
 	if col > 0 {
 		switch {
 		case !layoutToggle:
-			return tcell.Color16, tcell.AttrNone
+			return tcell.ColorDefault, tcell.AttrNone
 
 		case sel:
 			return tcell.ColorOrange, tcell.AttrBold
 		}
 
-		return tcell.ColorGrey, tcell.AttrBold
+		return tcell.ColorLightSlateGrey, tcell.AttrBold
 	}
 
 	if sel {
