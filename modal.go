@@ -116,6 +116,7 @@ func showHelpModal() {
 
 //gocyclo:ignore
 func changeDirSelect(pane *dirPane, input *tview.InputField) {
+	var modal *tview.Flex
 	var cdfilter, cdrefresh bool
 	var entries, entrycache []string
 
@@ -162,6 +163,8 @@ func changeDirSelect(pane *dirPane, input *tview.InputField) {
 			if pg, _ := pages.GetFrontPage(); pg != "cdmodal" {
 				pages.SwitchToPage("cdmodal").ShowPage("main")
 			}
+
+			resizemodal(flex, modal, cdtable)
 		}
 
 		app.SetFocus(input)
@@ -299,7 +302,8 @@ func changeDirSelect(pane *dirPane, input *tview.InputField) {
 	cdtable.SetSelectable(true, false)
 	cdtable.SetBackgroundColor(tcell.ColorLightGrey)
 
-	pages.AddPage("cdmodal", statusmodal(flex), true, false).ShowPage("main")
+	view, modal := statusmodal(flex)
+	pages.AddPage("cdmodal", view, true, false).ShowPage("main")
 
 	autocompletefunc(pane.getPath(), false)
 }
@@ -311,6 +315,7 @@ func editSelections(input, sinput *tview.InputField) *tview.InputField {
 	}
 
 	var row int
+	var modal *tview.Flex
 
 	empty := struct{}{}
 	delpaths := make(map[string]struct{}, len(multiselection))
@@ -436,6 +441,8 @@ func editSelections(input, sinput *tview.InputField) *tview.InputField {
 				app.SetFocus(input)
 			}
 
+			resizemodal(flex, modal, seltable)
+
 			return
 		}
 
@@ -457,6 +464,8 @@ func editSelections(input, sinput *tview.InputField) *tview.InputField {
 			if pg, _ := pages.GetFrontPage(); pg != "editmodal" {
 				pages.SwitchToPage("editmodal").ShowPage("main")
 			}
+
+			resizemodal(flex, modal, seltable)
 		}
 
 		app.SetFocus(input)
@@ -538,18 +547,34 @@ func editSelections(input, sinput *tview.InputField) *tview.InputField {
 	seltable.SetSelectable(true, false)
 	seltable.SetBackgroundColor(tcell.ColorLightGrey)
 
-	pages.AddAndSwitchToPage("editmodal", statusmodal(flex), true).ShowPage("main")
+	view, modal := statusmodal(flex)
+	resizemodal(flex, modal, seltable)
+	pages.AddAndSwitchToPage("editmodal", view, true).ShowPage("main")
 
 	return input
 }
 
-func statusmodal(v tview.Primitive) tview.Primitive {
-	_, _, _, height := pages.GetRect()
-	height /= 4
+func resizemodal(f, m *tview.Flex, t *tview.Table) {
+	height := t.GetRowCount()
+
+	_, _, _, screenHeight := pages.GetRect()
+	screenHeight /= 4
+
+	if height > screenHeight {
+		height = screenHeight
+	}
+
+	f.ResizeItem(t, height, 0)
+	m.ResizeItem(f, height, 0)
+}
+
+func statusmodal(v tview.Primitive) (tview.Primitive, *tview.Flex) {
+	_, _, _, screenHeight := pages.GetRect()
+	screenHeight /= 4
 
 	modal := tview.NewFlex().
 		AddItem(nil, 0, 1, false).
-		AddItem(v, height, 1, false).
+		AddItem(v, screenHeight, 1, false).
 		AddItem(nil, 1, 1, false).
 		SetDirection(tview.FlexRow)
 
@@ -565,7 +590,7 @@ func statusmodal(v tview.Primitive) tview.Primitive {
 		return false
 	})
 
-	return flex
+	return flex, modal
 }
 
 func centermodal(v, b tview.Primitive, title string, width, height int) tview.Primitive {
