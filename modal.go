@@ -116,8 +116,10 @@ func showHelpModal() {
 
 //gocyclo:ignore
 func changeDirSelect(pane *dirPane, input *tview.InputField) {
-	var entries []string
 	var cdfilter, cdrefresh bool
+	var entries, entrycache []string
+
+	dirpath := filepath.Dir(pane.getPath())
 
 	cdtable := tview.NewTable()
 
@@ -133,59 +135,20 @@ func changeDirSelect(pane *dirPane, input *tview.InputField) {
 		showInfoMsg("Changing directory to " + cdpath)
 	}
 
-	autocompletefunc := func(current string, refresh bool) {
+	reload := func(current string, refresh bool) {
 		var row int
+		var tmpentries []string
 
-		if len(current) == 0 {
-			return
-		}
-
-		cdfilter = true
-
-		switch pane.mode {
-		case mAdb:
-			entries, _ = pane.adbListDir(current, true)
-		case mLocal:
-			entries, _ = pane.localListDir(current, true)
-		}
-
-		if entries == nil {
-			r, _ := cdtable.GetSelection()
-			cdtable.Select(r, 0)
-
-			return
+		if entries != nil {
+			tmpentries = entries
+		} else {
+			tmpentries = entrycache
 		}
 
 		cdtable.Clear()
 
-		for _, entry := range entries {
+		for _, entry := range tmpentries {
 			if strings.Index(entry, current) != -1 {
-				cdtable.SetCell(row, 0, tview.NewTableCell("[::b]"+entry).
-					SetTextColor(tcell.ColorSteelBlue))
-
-				row++
-			}
-		}
-
-		cdrefresh = refresh
-
-		cdtable.Select(0, 0)
-		cdtable.ScrollToBeginning()
-
-		cdrefresh = false
-	}
-
-	filter := func(current string) {
-		var row int
-
-		if entries == nil {
-			return
-		}
-
-		cdtable.Clear()
-
-		for _, entry := range entries {
-			if strings.HasPrefix(entry, current) {
 				cdtable.SetCell(row, 0, tview.NewTableCell("[::b]"+entry).
 					SetTextColor(tcell.ColorSteelBlue))
 
@@ -200,19 +163,68 @@ func changeDirSelect(pane *dirPane, input *tview.InputField) {
 				pages.SwitchToPage("cdmodal").ShowPage("main")
 			}
 		}
+
 		app.SetFocus(input)
 
-		cdrefresh = true
+		cdrefresh = refresh
 
 		cdtable.Select(0, 0)
 		cdtable.ScrollToBeginning()
 
 		cdrefresh = false
+
+		dirpath = trimPath(filepath.Dir(current), false)
+	}
+
+	autocompletefunc := func(current string, refresh bool) {
+		var ok bool
+
+		if len(current) == 0 {
+			return
+		}
+
+		cdfilter = true
+
+		switch pane.mode {
+		case mAdb:
+			entries, ok = pane.adbListDir(current, true)
+
+		case mLocal:
+			entries, ok = pane.localListDir(current, true)
+		}
+
+		if !ok {
+			reload(current, refresh)
+			return
+		}
+
+		if entries == nil {
+			r, _ := cdtable.GetSelection()
+			cdtable.Select(r, 0)
+
+			return
+		}
+
+		entrycache = entries
+
+		reload(current, refresh)
+	}
+
+	filter := func(current string) {
+		if dirpath == current {
+			autocompletefunc(current, true)
+		} else {
+			reload(current, true)
+		}
 	}
 
 	input.SetChangedFunc(func(text string) {
 		if cdfilter {
 			return
+		}
+
+		if text == "" {
+			input.SetText("/")
 		}
 
 		filter(text)
@@ -236,11 +248,6 @@ func changeDirSelect(pane *dirPane, input *tview.InputField) {
 			pages.SwitchToPage("main")
 			statuspgs.SwitchToPage("statusmsg")
 			app.SetFocus(pane.table)
-
-		case tcell.KeyBackspace, tcell.KeyBackspace2:
-			text := input.GetText()
-			filter(input.GetText())
-			autocompletefunc(filepath.Dir(text), true)
 
 		case tcell.KeyCtrlW:
 			text := trimPath(input.GetText(), true)
@@ -288,13 +295,13 @@ func changeDirSelect(pane *dirPane, input *tview.InputField) {
 			Foreground(tcell.ColorLightGrey))
 	})
 
-	autocompletefunc(pane.getPath(), false)
-
 	cdtable.Select(0, 0)
 	cdtable.SetSelectable(true, false)
 	cdtable.SetBackgroundColor(tcell.ColorLightGrey)
 
-	pages.AddAndSwitchToPage("cdmodal", statusmodal(flex), true).ShowPage("main")
+	pages.AddPage("cdmodal", statusmodal(flex), true, false).ShowPage("main")
+
+	autocompletefunc(pane.getPath(), false)
 }
 
 //gocyclo:ignore
