@@ -33,7 +33,11 @@ func startStatus() {
 		case <-sctx.Done():
 			return
 
-		case msg := <-msgchan:
+		case msg, ok := <-msgchan:
+			if !ok {
+				return
+			}
+
 			t.Reset(2 * time.Second)
 
 			cleared = false
