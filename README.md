@@ -42,7 +42,6 @@ go get -u github.com/darkhz/adbtuifm
 adbtuifm [<flags>]
 
 Flags:
-  --mode <Local/ADB>  Specify which mode to start in
   --remote=<path>     Specify the remote(ADB) path to start in
   --local=<path>      Specify the local path to start in
   ```
