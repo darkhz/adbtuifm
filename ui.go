@@ -34,7 +34,18 @@ var (
 	layoutToggle bool
 )
 
-func newDirPane() *dirPane {
+func newDirPane(selpane bool) *dirPane {
+	var initPath string
+	var initMode ifaceMode
+
+	if selpane {
+		initMode = initSelMode
+		initPath = initSelPath
+	} else {
+		initMode = initAuxMode
+		initPath = initAuxPath
+	}
+
 	return &dirPane{
 		mode:   initMode,
 		path:   initPath,
@@ -73,7 +84,7 @@ func setupUI() {
 }
 
 func setupPaneView() *tview.Flex {
-	selPane, auxPane := newDirPane(), newDirPane()
+	selPane, auxPane := newDirPane(true), newDirPane(false)
 
 	prevPane = selPane
 

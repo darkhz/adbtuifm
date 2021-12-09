@@ -5,23 +5,21 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"strings"
 	"syscall"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
-	initPath  string
-	initAPath string
-	initLPath string
-	initMode  ifaceMode
+	initAPath   string
+	initLPath   string
+	initSelPath string
+	initAuxPath string
+	initSelMode ifaceMode
+	initAuxMode ifaceMode
 )
 
 func main() {
-	cmdMode := kingpin.Flag("mode", "Specify which mode to start in, ADB or Local").
-		Default("Local").String()
-
 	cmdAPath := kingpin.Flag("remote", "Specify the remote path to start in").
 		Default("/sdcard").String()
 
@@ -30,36 +28,28 @@ func main() {
 
 	kingpin.Parse()
 
-	switch {
-	case strings.EqualFold(*cmdMode, "ADB"):
-		device, err := getAdb()
-		if err != nil {
-			fmt.Println("adbtuifm: No ADB device or device unauthorized")
-			return
-		}
-
-		_, err = device.Stat(*cmdAPath)
-		if err != nil {
-			fmt.Printf("adbtuifm: %s: Invalid ADB Path\n", *cmdAPath)
-			return
-		}
-
-		initMode = mAdb
-		initPath = *cmdAPath
-
-	case strings.EqualFold(*cmdMode, "Local"):
-		_, err := os.Stat(*cmdLPath)
-		if err != nil {
-			fmt.Printf("adbtuifm: %s: Invalid Local Path!\n", *cmdLPath)
-			return
-		}
-
-		initMode = mLocal
-		initPath, _ = filepath.Abs(*cmdLPath)
-
-	default:
-		fmt.Println("adbtuifm: Invalid Mode!")
+	_, err := os.Lstat(*cmdLPath)
+	if err != nil {
+		fmt.Printf("adbtuifm: %s: Invalid local path\n", *cmdLPath)
 		return
+	}
+
+	initSelMode = mLocal
+	initSelPath, _ = filepath.Abs(*cmdLPath)
+
+	device, err := getAdb()
+	if device != nil {
+		_, err := device.Stat(*cmdAPath)
+		if err != nil {
+			fmt.Printf("adbtuifm: %s: Invalid remote path\n", *cmdAPath)
+			return
+		}
+
+		initAuxMode = mAdb
+		initAuxPath = *cmdAPath
+	} else {
+		initAuxMode = mLocal
+		initAuxPath = initSelPath
 	}
 
 	initAPath = *cmdAPath
