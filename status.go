@@ -8,6 +8,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	adb "github.com/zach-klippenstein/goadb"
 )
 
 var (
@@ -99,7 +100,7 @@ func getStatusInput(msg string, accept bool) *tview.InputField {
 }
 
 func showInfoMsg(msg string) {
-	msgchan <- "[::b]" + msg
+	msgchan <- "[::b]" + tview.Escape(msg)
 }
 
 func showErrorMsg(err error, autocomplete bool) {
@@ -107,7 +108,7 @@ func showErrorMsg(err error, autocomplete bool) {
 		return
 	}
 
-	msgchan <- "[red::b]" + err.Error()
+	msgchan <- "[red::b]" + tview.Escape(err.Error())
 }
 
 func showConfirmMsg(msg string, alert bool, doFunc, resetFunc func()) {
@@ -262,7 +263,13 @@ func showMkdirRenameInput(selPane, auxPane *dirPane, key rune) {
 	var title string
 
 	row, _ := selPane.table.GetSelection()
-	origname := selPane.table.GetCell(row, 0).Text
+
+	ref := selPane.table.GetCell(row, 0).GetReference()
+	if ref == nil {
+		return
+	}
+
+	origname := ref.(*adb.DirEntry).Name
 
 	switch key {
 	case 'M':
@@ -280,12 +287,14 @@ func showMkdirRenameInput(selPane, auxPane *dirPane, key rune) {
 	infomsg := func(newname string) {
 		var info string
 
+		newname, origname = tview.Escape(newname), tview.Escape(origname)
+
 		switch key {
 		case 'M':
-			info = "Created " + newname + " in " + selPane.getPath()
+			info = "Created '" + newname + "' in " + selPane.getPath()
 
 		case 'R':
-			info = "Renamed " + strings.TrimSuffix(origname, "/") + " to " + newname
+			info = "Renamed '" + origname + "' to '" + newname + "'"
 		}
 
 		msgchan <- info

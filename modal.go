@@ -150,8 +150,10 @@ func changeDirSelect(pane *dirPane, input *tview.InputField) {
 
 		for _, entry := range tmpentries {
 			if strings.Index(entry, current) != -1 {
-				cdtable.SetCell(row, 0, tview.NewTableCell("[::b]"+entry).
-					SetTextColor(tcell.ColorSteelBlue))
+				cell := tview.NewTableCell("[::b]" + tview.Escape(entry))
+
+				cell.SetReference(entry)
+				cdtable.SetCell(row, 0, cell.SetTextColor(tcell.ColorSteelBlue))
 
 				row++
 			}
@@ -285,11 +287,12 @@ func changeDirSelect(pane *dirPane, input *tview.InputField) {
 			return
 		}
 
-		if cell.Text == "" {
+		ref := cell.GetReference()
+		if ref == nil {
 			return
 		}
 
-		input.SetText(strings.TrimPrefix(cell.Text, "[::b]"))
+		input.SetText(ref.(string))
 
 		cdtable.SetSelectedStyle(tcell.Style{}.
 			Bold(true).
@@ -382,9 +385,16 @@ func editSelections(input, sinput *tview.InputField) *tview.InputField {
 			}
 
 			cell := seltable.GetCell(row, 0)
+			if cell == nil {
+				return
+			}
 
-			selpath := strings.TrimPrefix(cell.Text, "[::b]")
+			ref := cell.GetReference()
+			if ref == nil {
+				return
+			}
 
+			selpath := ref.(string)
 			_, ok := delpaths[selpath]
 
 			if !ok && (one || inv) {
@@ -421,7 +431,10 @@ func editSelections(input, sinput *tview.InputField) *tview.InputField {
 			color = tcell.ColorSteelBlue
 		}
 
-		seltable.SetCell(i, 0, tview.NewTableCell("[::b]"+name).SetTextColor(color))
+		cell := tview.NewTableCell("[::b]" + tview.Escape(name))
+
+		cell.SetReference(name)
+		seltable.SetCell(i, 0, cell.SetTextColor(color))
 	}
 
 	input.SetChangedFunc(func(text string) {
@@ -536,8 +549,10 @@ func editSelections(input, sinput *tview.InputField) *tview.InputField {
 
 	selectLock.RLock()
 	for spath := range multiselection {
-		seltable.SetCell(row, 0, tview.NewTableCell("[::b]"+spath).
-			SetTextColor(tcell.ColorOrangeRed))
+		cell := tview.NewTableCell("[::b]" + tview.Escape(spath))
+
+		cell.SetReference(spath)
+		seltable.SetCell(row, 0, cell.SetTextColor(tcell.ColorOrangeRed))
 
 		row++
 	}

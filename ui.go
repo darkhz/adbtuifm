@@ -395,7 +395,7 @@ func (p *dirPane) updateDirPane(row int, sel bool, cells []*tview.TableCell, dir
 
 		color, attr := setEntryColor(col, sel, entry[1])
 
-		cell := tview.NewTableCell(dname)
+		cell := tview.NewTableCell(tview.Escape(dname))
 		cell.SetReference(dir)
 
 		if col > 0 {
@@ -454,7 +454,7 @@ func (p *dirPane) setPaneTitle() {
 		p.path = trimPath(p.path, false)
 	}
 
-	title := fmt.Sprintf("|- %s: %s -|", prefix, p.path)
+	title := fmt.Sprintf("|- %s: %s -|", prefix, tview.Escape(p.path))
 	p.table.SetTitle(title)
 }
 

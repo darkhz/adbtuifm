@@ -135,17 +135,18 @@ func (p *dirPane) multiSelectHandler(all, inverse bool, totalrows int) {
 		}
 
 		checksel := false
-		fullpath := filepath.Join(p.path, cell.Text)
+
+		dir = ref.(*adb.DirEntry)
+		fullpath := filepath.Join(p.path, dir.Name)
 
 		if mselone || mselinv {
-			checksel = checkSelected(p.path, cell.Text, true)
+			checksel = checkSelected(p.path, dir.Name, true)
 		}
 
 		if !checksel {
 			addmsel(fullpath, p.mode)
 		}
 
-		dir = ref.(*adb.DirEntry)
 		p.updateDirPane(i, !checksel, nil, dir)
 
 		if mselone {
