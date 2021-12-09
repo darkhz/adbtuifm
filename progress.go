@@ -76,8 +76,17 @@ func (o *operation) setNewProgress(src, dst string, selindex, seltotal int) erro
 	var tpath string
 
 	opstr := o.opmode.String()
-	srcstr := tview.Escape(filepath.Base(src))
-	dstdir := tview.Escape(trimPath(filepath.Dir(dst), false))
+
+	srcstr := tview.Escape(
+		trimName(
+			filepath.Base(src),
+		),
+	)
+	dstdir := tview.Escape(
+		trimName(
+			trimPath(filepath.Dir(dst), false),
+		),
+	)
 
 	tpath = opString(opstr) + " "
 
@@ -90,7 +99,7 @@ func (o *operation) setNewProgress(src, dst string, selindex, seltotal int) erro
 		fallthrough
 
 	default:
-		tpath += srcstr + " to " + dstdir
+		tpath += "'" + srcstr + "' to '" + dstdir + "'"
 	}
 
 	o.currFile = 0

@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
 	adb "github.com/zach-klippenstein/goadb"
@@ -17,6 +18,24 @@ import (
 )
 
 var pathLock sync.Mutex
+
+func trimName(name string) string {
+	var size, x int
+
+	_, _, w, _ := pages.GetRect()
+	length := w / 10
+
+	if len([]rune(name)) < length {
+		return name
+	}
+
+	for i := 0; i < length && x < len(name); i++ {
+		_, size = utf8.DecodeRuneInString(name[x:])
+		x += size
+	}
+
+	return name[:x] + "..."
+}
 
 func trimPath(testPath string, cdBack bool) string {
 	testPath = filepath.Clean(testPath)
