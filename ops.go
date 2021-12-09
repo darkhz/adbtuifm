@@ -342,7 +342,7 @@ func (o *operation) jobFinished() {
 			opsView.RemoveRow(row - 1)
 
 			resetOpsView()
-			jobNum = (rows - 2) / 2
+			jobNum = rows - 2
 		})
 	})
 }
