@@ -8,6 +8,12 @@ import (
 	"github.com/rivo/tview"
 )
 
+var (
+	popupOpen  bool
+	popupFlex  *tview.Flex
+	popupModal tview.Primitive
+)
+
 func showHelpModal() {
 	helpview := tview.NewTextView()
 	helpview.SetBackgroundColor(tcell.ColorGrey)
@@ -250,6 +256,7 @@ func changeDirSelect(pane *dirPane, input *tview.InputField) {
 			fallthrough
 
 		case tcell.KeyEscape:
+			setPopupOpen(false, nil, nil)
 			pages.SwitchToPage("main")
 			statuspgs.SwitchToPage("statusmsg")
 			app.SetFocus(pane.table)
@@ -341,6 +348,7 @@ func editSelections(input, sinput *tview.InputField) *tview.InputField {
 	}
 
 	exit := func() {
+		setPopupOpen(false, nil, nil)
 		pages.SwitchToPage("main")
 
 		sel := len(multiselection) != 0
@@ -569,6 +577,14 @@ func editSelections(input, sinput *tview.InputField) *tview.InputField {
 	return input
 }
 
+func resizePopup(width int) {
+	if !popupOpen {
+		return
+	}
+
+	popupFlex.ResizeItem(popupModal, width, 0)
+}
+
 func resizemodal(f, m *tview.Flex, t *tview.Table) {
 	height := t.GetRowCount()
 
@@ -581,6 +597,12 @@ func resizemodal(f, m *tview.Flex, t *tview.Table) {
 
 	f.ResizeItem(t, height, 0)
 	m.ResizeItem(f, height, 0)
+}
+
+func setPopupOpen(open bool, modal tview.Primitive, flex *tview.Flex) {
+	popupOpen = open
+	popupFlex = flex
+	popupModal = modal
 }
 
 func statusmodal(v tview.Primitive) (tview.Primitive, *tview.Flex) {
@@ -598,12 +620,7 @@ func statusmodal(v tview.Primitive) (tview.Primitive, *tview.Flex) {
 		AddItem(modal, 10, 1, false).
 		AddItem(nil, 0, 1, false)
 
-	app.SetBeforeDrawFunc(func(t tcell.Screen) bool {
-		width, _ := t.Size()
-		flex.ResizeItem(modal, width, 0)
-
-		return false
-	})
+	setPopupOpen(true, modal, flex)
 
 	return flex, modal
 }

@@ -81,6 +81,7 @@ func setupUI() {
 	app.SetBeforeDrawFunc(func(t tcell.Screen) bool {
 		width, _ := t.Size()
 
+		resizePopup(width)
 		resizeProgress(width)
 
 		return false
