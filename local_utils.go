@@ -19,11 +19,8 @@ import (
 
 var pathLock sync.Mutex
 
-func trimName(name string) string {
+func trimName(name string, length int) string {
 	var size, x int
-
-	_, _, w, _ := pages.GetRect()
-	length := w / 10
 
 	if len([]rune(name)) < length {
 		return name

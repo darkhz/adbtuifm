@@ -339,10 +339,11 @@ func (o *operation) jobFinished() {
 	app.QueueUpdateDraw(func() {
 		iterOps(false, o, func(row, rows int, op *operation) {
 			opsView.RemoveRow(row)
+			opsView.RemoveRow(row)
 			opsView.RemoveRow(row - 1)
 
 			resetOpsView()
-			jobNum = rows - 2
+			jobNum = rows - opRowNum
 		})
 	})
 }

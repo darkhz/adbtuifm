@@ -78,6 +78,14 @@ func setupUI() {
 		return event
 	})
 
+	app.SetBeforeDrawFunc(func(t tcell.Screen) bool {
+		width, _ := t.Size()
+
+		resizeProgress(width)
+
+		return false
+	})
+
 	if err := app.SetRoot(pages, true).SetFocus(prevPane.table).Run(); err != nil {
 		panic(err)
 	}
@@ -318,13 +326,13 @@ func resetOpsView() {
 	row, _ := opsView.GetSelection()
 
 	switch {
-	case count/2 == 0:
+	case count/opRowNum == 0:
 		pages.SwitchToPage("main")
 		app.SetFocus(prevPane.table)
 		opsView.SetSelectable(false, false)
 
 	case row-1 == count:
-		opsView.Select(row-2, 0)
+		opsView.Select(row-opRowNum, 0)
 	}
 }
 

@@ -9,12 +9,14 @@ import (
 
 	"github.com/rivo/tview"
 	"github.com/schollz/progressbar/v3"
+	"golang.org/x/sync/semaphore"
 )
 
 type progressMode struct {
 	text *tview.TableCell
 	prog *tview.TableCell
 	pbar *progressbar.ProgressBar
+	lock *semaphore.Weighted
 }
 
 type opStatus int
@@ -24,13 +26,11 @@ const (
 	opDone
 )
 
+const opRowNum = 3
+
 var updateLock sync.Mutex
 
 func (o operation) getDescription() string {
-	if o.totalBytes < 0 {
-		return "-- In progress --"
-	}
-
 	if o.totalFile <= 1 {
 		return ""
 	}
@@ -39,9 +39,18 @@ func (o operation) getDescription() string {
 }
 
 func (o *operation) createPb() {
+	if o.progress.lock == nil {
+		o.progress.lock = semaphore.NewWeighted(1)
+	}
+
+	if !o.progress.lock.TryAcquire(1) {
+		return
+	}
+	defer o.progress.lock.Release(1)
+
 	o.progress.pbar = progressbar.NewOptions64(
 		o.totalBytes,
-		progressbar.OptionSetWidth(50),
+		progressbar.OptionFullWidth(),
 		progressbar.OptionSetWriter(o),
 		progressbar.OptionSpinnerType(34),
 		progressbar.OptionSetPredictTime(false),
@@ -60,7 +69,11 @@ func (o *operation) Write(b []byte) (n int, err error) {
 	}
 
 	app.QueueUpdateDraw(func() {
-		o.progress.prog.SetText(string(b))
+		if o.totalBytes > -1 {
+			o.progress.prog.SetText(string(b))
+		} else {
+			o.progress.prog.SetText("  " + string(b))
+		}
 	})
 
 	return 0, nil
@@ -77,18 +90,10 @@ func (o *operation) setNewProgress(src, dst string, selindex, seltotal int) erro
 
 	opstr := o.opmode.String()
 
-	srcstr := tview.Escape(
-		trimName(
-			filepath.Base(src),
-		),
-	)
-	dstdir := tview.Escape(
-		trimName(
-			trimPath(filepath.Dir(dst), false),
-		),
-	)
+	srcstr := tview.Escape(filepath.Base(src))
+	dstdir := tview.Escape(trimPath(filepath.Dir(dst), false))
 
-	tpath = opString(opstr) + " "
+	tpath = "  " + opString(opstr) + " "
 
 	switch o.opmode {
 	case opDelete, opMkdir:
@@ -123,6 +128,11 @@ func (o *operation) setNewProgress(src, dst string, selindex, seltotal int) erro
 
 		if o.opmode != opCopy || o.transfer == adbToAdb {
 			go func() {
+				if !o.progress.lock.TryAcquire(1) {
+					return
+				}
+				defer o.progress.lock.Release(1)
+
 				for {
 					select {
 					case <-o.ctx.Done():
@@ -132,6 +142,7 @@ func (o *operation) setNewProgress(src, dst string, selindex, seltotal int) erro
 					}
 
 					o.progress.pbar.Add64(1)
+
 					time.Sleep(20 * time.Millisecond)
 				}
 			}()
@@ -141,13 +152,51 @@ func (o *operation) setNewProgress(src, dst string, selindex, seltotal int) erro
 	return nil
 }
 
+func resizeProgress(width int) {
+	var name string
+
+	if !opsView.HasFocus() {
+		return
+	}
+
+	rows := opsView.GetRowCount()
+	if rows <= 0 {
+		return
+	}
+
+	for i := 0; i < rows; i++ {
+		cell := opsView.GetCell(i, 1)
+		if cell == nil {
+			continue
+		}
+
+		ref := cell.GetReference()
+		if ref == nil {
+			continue
+		}
+
+		text := ref.(string)
+		if len([]rune(text)) < width {
+			name = text
+		} else if len([]rune(text)) > width-10 {
+			name = trimName(text, width-10)
+		}
+
+		opsView.SetCell(i, 1, tview.NewTableCell(name).
+			SetExpansion(1).
+			SetReference(text).
+			SetSelectable(false).
+			SetAlign(tview.AlignLeft))
+	}
+}
+
 func (o *operation) opSetStatus(status opStatus, err error) {
 	updateLock.Lock()
 	defer updateLock.Unlock()
 
 	switch status {
 	case opInProgress:
-		jobNum += 2
+		jobNum += opRowNum
 		o.updateOpsView(true)
 
 	case opDone:
@@ -168,11 +217,9 @@ func (o *operation) updateOpsView(init bool, msg ...string) {
 		if init {
 			opsView.SetCell(o.id, 0, tview.NewTableCell("").
 				SetSelectable(false))
+
 			opsView.SetCell(o.id, 1, tview.NewTableCell("").
 				SetSelectable(false))
-
-			opsView.SetCell(o.id+1, 0, tview.NewTableCell("*").
-				SetReference(o))
 
 			return
 		}
@@ -180,16 +227,24 @@ func (o *operation) updateOpsView(init bool, msg ...string) {
 		o.progress.prog = tview.NewTableCell("")
 		o.progress.text = tview.NewTableCell("")
 
+		opsView.SetCell(o.id+1, 0, tview.NewTableCell("*").
+			SetReference(o).
+			SetSelectable(true))
+
 		opsView.SetCell(o.id+1, 1, o.progress.text.
 			SetText(msg[0]).
 			SetExpansion(1).
+			SetReference(msg[0]).
 			SetSelectable(false).
 			SetAlign(tview.AlignLeft))
 
-		opsView.SetCell(o.id+1, 2, o.progress.prog.
+		opsView.SetCell(o.id+2, 0, tview.NewTableCell("").
+			SetSelectable(false))
+
+		opsView.SetCell(o.id+2, 1, o.progress.prog.
 			SetText(msg[1]).
 			SetExpansion(1).
 			SetSelectable(false).
-			SetAlign(tview.AlignRight))
+			SetAlign(tview.AlignLeft))
 	})
 }
