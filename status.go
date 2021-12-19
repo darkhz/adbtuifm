@@ -111,7 +111,7 @@ func showErrorMsg(err error, autocomplete bool) {
 	msgchan <- "[red::b]" + tview.Escape(err.Error())
 }
 
-func showConfirmMsg(msg string, alert bool, doFunc, resetFunc func()) {
+func showConfirmMsg(msg string, doFunc, resetFunc func()) {
 	input := getStatusInput(msg, true)
 
 	exit := func(reset bool) {

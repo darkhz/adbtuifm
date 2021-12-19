@@ -531,7 +531,7 @@ func stopApp() {
 
 	quitmsg += " (y/n)?"
 
-	showConfirmMsg(quitmsg, false, func() {
+	showConfirmMsg(quitmsg, func() {
 		stopUI()
 	}, func() {})
 }
