@@ -21,6 +21,8 @@ var (
 
 	sctx    context.Context
 	scancel context.CancelFunc
+
+	filterInput string
 )
 
 func startStatus() {
@@ -202,6 +204,7 @@ func (p *dirPane) showFilterInput() {
 	input := getStatusInput("Filter entries:", false)
 
 	exit := func() {
+		filterInput = input.GetText()
 		statuspgs.SwitchToPage("statusmsg")
 		app.SetFocus(prevPane.table)
 	}
@@ -244,16 +247,18 @@ func (p *dirPane) showFilterInput() {
 		case tcell.KeyCtrlR:
 			p.reselect(false)
 
-		case tcell.KeyUp, tcell.KeyDown, tcell.KeyEnter:
+		case tcell.KeyUp, tcell.KeyDown:
 			p.table.InputHandler()(event, nil)
 			fallthrough
 
-		case tcell.KeyEscape:
+		case tcell.KeyEnter, tcell.KeyEscape:
 			exit()
 		}
 
 		return event
 	})
+
+	input.SetText(filterInput)
 
 	statuspgs.AddAndSwitchToPage("filter", input, true)
 	app.SetFocus(input)

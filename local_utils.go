@@ -198,7 +198,7 @@ func (p *dirPane) doChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
 	p.createDirList(cdFwd, cdBack, prevDir)
 }
 
-func (p *dirPane) ChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
+func (p *dirPane) ChangeDir(cdFwd, cdBack bool, tpath ...string) {
 	go func() {
 		if !p.getLock() {
 			return
@@ -207,6 +207,12 @@ func (p *dirPane) ChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
 
 		p.doChangeDir(cdFwd, cdBack, tpath...)
 	}()
+}
+
+func (p *dirPane) ChangeDirEvent(cdFwd, cdBack bool) {
+	filterInput = ""
+
+	p.ChangeDir(cdFwd, cdBack)
 }
 
 func (p *dirPane) createDirList(cdFwd, cdBack bool, prevDir string) {

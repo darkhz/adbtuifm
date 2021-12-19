@@ -206,11 +206,11 @@ func setupPane(selPane, auxPane *dirPane) {
 			selPane.reselect(false)
 
 		case tcell.KeyEnter, tcell.KeyRight:
-			selPane.ChangeDir(true, false)
+			selPane.ChangeDirEvent(true, false)
 			return nil
 
 		case tcell.KeyBackspace, tcell.KeyBackspace2, tcell.KeyLeft:
-			selPane.ChangeDir(false, true)
+			selPane.ChangeDirEvent(false, true)
 			return nil
 		}
 
