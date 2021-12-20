@@ -215,6 +215,32 @@ func (p *dirPane) ChangeDirEvent(cdFwd, cdBack bool) {
 	p.ChangeDir(cdFwd, cdBack)
 }
 
+func resizeDirEntries(width int) {
+	for _, pane := range []*dirPane{selPane, auxPane} {
+		if !pane.getLock() {
+			continue
+		}
+
+		for i, _ := range pane.pathList {
+			cell := pane.table.GetCell(i, 0)
+			if cell == nil {
+				continue
+			}
+
+			ref := cell.GetReference()
+			if ref == nil {
+				continue
+			}
+
+			refdir := ref.(*adb.DirEntry)
+
+			pane.table.SetCell(i, 0, cell.SetText(trimName(refdir.Name, width-40)))
+		}
+
+		pane.setUnlock()
+	}
+}
+
 func (p *dirPane) createDirList(cdFwd, cdBack bool, prevDir string) {
 	app.QueueUpdateDraw(func() {
 		var pos int

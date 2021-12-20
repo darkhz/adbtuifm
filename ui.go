@@ -25,6 +25,8 @@ var (
 	app      *tview.Application
 	pages    *tview.Pages
 	opsView  *tview.Table
+	selPane  *dirPane
+	auxPane  *dirPane
 	prevPane *dirPane
 
 	paneToggle   bool
@@ -91,6 +93,7 @@ func setupUI() {
 
 		resizePopup(width)
 		resizeProgress(width)
+		resizeDirEntries(width)
 
 		return false
 	})
@@ -101,7 +104,7 @@ func setupUI() {
 }
 
 func setupPaneView() *tview.Flex {
-	selPane, auxPane := newDirPane(true), newDirPane(false)
+	selPane, auxPane = newDirPane(true), newDirPane(false)
 
 	prevPane = selPane
 
