@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"time"
 
@@ -204,11 +206,20 @@ func (o *operation) opSetStatus(status opStatus, err error) {
 
 		if err != nil {
 			if err != context.Canceled {
-				showErrorMsg(err, false)
+				e := errors.New("Job #" + strconv.Itoa((o.id+1)/opRowNum) + ": " + err.Error())
+
+				showErrorMsg(e, false)
 			}
 		}
 
 		o.jobFinished()
+	}
+
+	if jobNum > 0 {
+		text := strconv.Itoa(jobNum/opRowNum) + " job(s) are running"
+		msgchan <- message{text, true}
+	} else {
+		msgchan <- message{"", true}
 	}
 }
 
