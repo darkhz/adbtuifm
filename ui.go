@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	adb "github.com/zach-klippenstein/goadb"
@@ -20,18 +18,27 @@ type dirPane struct {
 	plock    *semaphore.Weighted
 	entry    *adb.DirEntry
 	pathList []*adb.DirEntry
+	title    *tview.TextView
 }
 
 var (
-	app       *tview.Application
-	pages     *tview.Pages
-	opsView   *tview.Table
-	panes     *tview.Flex
-	wrapPanes *tview.Flex
-	prevPane  *dirPane
+	app      *tview.Application
+	pages    *tview.Pages
+	opsView  *tview.Table
+	prevPane *dirPane
 
 	paneToggle   bool
 	layoutToggle bool
+
+	panes          *tview.Flex
+	titleBar       *tview.Flex
+	mainFlex       *tview.Flex
+	wrapVertical   *tview.Flex
+	wrapHorizontal *tview.Flex
+
+	boxVertical       *tview.Box
+	boxHorizontal     *tview.Box
+	boxTitleSeparator *tview.Box
 )
 
 func newDirPane(selpane bool) *dirPane {
@@ -52,6 +59,7 @@ func newDirPane(selpane bool) *dirPane {
 		apath:  initAPath,
 		dpath:  initLPath,
 		table:  tview.NewTable(),
+		title:  tview.NewTextView(),
 		plock:  semaphore.NewWeighted(1),
 		hidden: true,
 	}
@@ -101,12 +109,55 @@ func setupPaneView() *tview.Flex {
 	setupPane(selPane, auxPane)
 	setupPane(auxPane, selPane)
 
+	boxHorizontal = tview.NewBox().
+		SetBackgroundColor(tcell.ColorDefault).
+		SetDrawFunc(func(screen tcell.Screen, x, y, width, height int) (int, int, int, int) {
+			centerY := y + height/2
+			for cx := x; cx < x+width; cx++ {
+				screen.SetContent(
+					cx,
+					centerY,
+					tview.BoxDrawingsLightHorizontal,
+					nil,
+					tcell.StyleDefault.Foreground(tcell.ColorWhite),
+				)
+			}
+
+			return x + 1, centerY + 1, width - 2, height - (centerY + 1 - y)
+		})
+
+	boxVertical = tview.NewBox().
+		SetBackgroundColor(tcell.ColorDefault).
+		SetDrawFunc(func(screen tcell.Screen, x, y, width, height int) (int, int, int, int) {
+			centerX := x + width/2
+			for cy := y; cy < y+height; cy++ {
+				screen.SetContent(
+					centerX,
+					cy,
+					tview.BoxDrawingsLightVertical,
+					nil,
+					tcell.StyleDefault.Foreground(tcell.ColorWhite),
+				)
+			}
+
+			return x + 1, centerX + 1, width - 2, height - (centerX + 1 - y)
+		})
+
+	boxTitleSeparator = tview.NewBox().
+		SetBackgroundColor(tcell.ColorDefault)
+
 	panes = tview.NewFlex().
 		AddItem(selPane.table, 0, 1, true).
+		AddItem(boxVertical, 5, 0, false).
 		AddItem(auxPane.table, 0, 1, false).
 		SetDirection(tview.FlexColumn)
 
-	wrapPanes = tview.NewFlex().
+	titleBar = tview.NewFlex().
+		AddItem(selPane.title, 0, 1, true).
+		AddItem(boxTitleSeparator, 1, 0, true).
+		AddItem(auxPane.title, 0, 1, false)
+
+	wrapPanes := tview.NewFlex().
 		AddItem(panes, 0, 2, true).
 		SetDirection(tview.FlexRow)
 
@@ -116,17 +167,27 @@ func setupPaneView() *tview.Flex {
 	wrapFlex := tview.NewFlex().
 		AddItem(wrapView, 0, 1, true)
 
-	wrapStatus := tview.NewFlex().
+	wrapVertical = tview.NewFlex().
+		AddItem(titleBar, 1, 0, false).
 		AddItem(wrapFlex, 0, 2, true).
-		AddItem(statuspgs, 1, 0, true).
+		SetDirection(tview.FlexRow)
+
+	wrapHorizontal = tview.NewFlex().
+		AddItem(selPane.title, 1, 0, false).
+		AddItem(selPane.table, 0, 1, true).
+		AddItem(boxHorizontal, 1, 0, false).
+		AddItem(auxPane.title, 1, 0, false).
+		AddItem(auxPane.table, 0, 1, false).
+		SetDirection(tview.FlexRow)
+
+	mainFlex = tview.NewFlex().
+		AddItem(wrapVertical, 0, 1, true).
+		AddItem(statuspgs, 1, 0, false).
 		SetDirection(tview.FlexRow)
 
 	wrapFlex.SetBackgroundColor(tcell.ColorDefault)
 
-	selPane.table.SetBackgroundColor(tcell.ColorDefault)
-	auxPane.table.SetBackgroundColor(tcell.ColorDefault)
-
-	return wrapStatus
+	return mainFlex
 }
 
 func setupOpsView() *tview.Table {
@@ -265,8 +326,13 @@ func setupPane(selPane, auxPane *dirPane) {
 		return event
 	})
 
-	selPane.table.SetBorder(true)
+	selPane.table.SetBorder(false)
 	selPane.table.SetSelectable(true, false)
+	selPane.table.SetBackgroundColor(tcell.ColorDefault)
+
+	selPane.title.SetDynamicColors(true)
+	selPane.title.SetTextAlign(tview.AlignCenter)
+	selPane.title.SetBackgroundColor(tcell.ColorDefault)
 
 	selPane.table.SetSelectionChangedFunc(func(row, col int) {
 		rows := selPane.table.GetRowCount()
@@ -338,29 +404,63 @@ func resetOpsView() {
 }
 
 func swapLayout(selPane, auxPane *dirPane) {
+	mainFlex.RemoveItem(statuspgs)
+
 	if !layoutToggle {
 		layoutToggle = true
-		panes.SetDirection(tview.FlexRow)
-		wrapPanes.SetDirection(tview.FlexColumn)
+		mainFlex.RemoveItem(wrapVertical)
+		mainFlex.AddItem(wrapHorizontal, 0, 1, true)
 	} else {
 		layoutToggle = false
-		panes.SetDirection(tview.FlexColumn)
-		wrapPanes.SetDirection(tview.FlexRow)
+		mainFlex.RemoveItem(wrapHorizontal)
+		mainFlex.AddItem(wrapVertical, 0, 1, true)
 	}
+
+	mainFlex.AddItem(statuspgs, 1, 0, false)
 
 	selPane.reselect(true)
 	auxPane.reselect(true)
 }
 
 func swapPanes(selPane, auxPane *dirPane) {
+	vertToggle := func(p *dirPane) {
+		panes.RemoveItem(p.table)
+		panes.RemoveItem(boxVertical)
+
+		panes.AddItem(boxVertical, 5, 0, false)
+		panes.AddItem(p.table, 0, 1, true)
+
+		titleBar.RemoveItem(p.title)
+		titleBar.RemoveItem(boxTitleSeparator)
+
+		titleBar.AddItem(boxTitleSeparator, 1, 0, true)
+		titleBar.AddItem(p.title, 0, 1, false)
+	}
+
+	horizToggle := func(p *dirPane) {
+		wrapHorizontal.RemoveItem(p.title)
+		wrapHorizontal.RemoveItem(p.table)
+		wrapHorizontal.RemoveItem(boxHorizontal)
+
+		wrapHorizontal.AddItem(boxHorizontal, 1, 0, false)
+		wrapHorizontal.AddItem(p.title, 1, 0, false)
+		wrapHorizontal.AddItem(p.table, 0, 1, true)
+	}
+
+	toggle := func(p *dirPane) {
+		if !layoutToggle {
+			vertToggle(p)
+		} else {
+			horizToggle(p)
+		}
+	}
+
 	if !paneToggle {
+		toggle(selPane)
 		paneToggle = true
-		panes.RemoveItem(selPane.table)
-		panes.AddItem(selPane.table, 0, 1, true)
 	} else {
+		toggle(auxPane)
 		paneToggle = false
-		panes.RemoveItem(auxPane.table)
-		panes.AddItem(auxPane.table, 0, 1, true)
 	}
 }
 
@@ -403,6 +503,7 @@ func (p *dirPane) reselect(psel bool) {
 
 	pos, _ := p.table.GetSelection()
 	p.table.Select(pos, 0)
+	p.table.ScrollToBeginning()
 }
 
 func (p *dirPane) updateDirPane(row int, sel bool, cells []*tview.TableCell, dir *adb.DirEntry) {
@@ -474,8 +575,8 @@ func (p *dirPane) setPaneTitle() {
 		p.path = trimPath(p.path, false)
 	}
 
-	title := fmt.Sprintf("|- %s: %s -|", prefix, tview.Escape(p.path))
-	p.table.SetTitle(title)
+	title := "[::bu]" + prefix + ": " + tview.Escape(p.path)
+	p.title.SetText(title)
 }
 
 func (p *dirPane) setPaneSelectable(status bool) {
