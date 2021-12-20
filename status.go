@@ -11,12 +11,17 @@ import (
 	adb "github.com/zach-klippenstein/goadb"
 )
 
+type message struct {
+	text    string
+	persist bool
+}
+
 var (
 	statuspgs *tview.Pages
 	statusmsg *tview.TextView
 
 	mrinput    string
-	msgchan    chan string
+	msgchan    chan message
 	entrycache []string
 
 	sctx    context.Context
@@ -26,6 +31,7 @@ var (
 )
 
 func startStatus() {
+	var text string
 	var cleared bool
 
 	t := time.NewTicker(2 * time.Second)
@@ -45,8 +51,14 @@ func startStatus() {
 
 			cleared = false
 
+			if msg.persist {
+				text = msg.text
+			}
+
 			app.QueueUpdateDraw(func() {
-				statusmsg.SetText(msg)
+				if !msg.persist || (msg.text == "" && msg.persist) {
+					statusmsg.SetText(msg.text)
+				}
 			})
 
 		case <-t.C:
@@ -57,7 +69,7 @@ func startStatus() {
 			cleared = true
 
 			app.QueueUpdateDraw(func() {
-				statusmsg.Clear()
+				statusmsg.SetText(text)
 			})
 		}
 	}
@@ -81,7 +93,7 @@ func setupStatus() {
 
 	sctx, scancel = context.WithCancel(context.Background())
 
-	msgchan = make(chan string)
+	msgchan = make(chan message)
 	go startStatus()
 }
 
@@ -102,7 +114,7 @@ func getStatusInput(msg string, accept bool) *tview.InputField {
 }
 
 func showInfoMsg(msg string) {
-	msgchan <- "[::b]" + tview.Escape(msg)
+	msgchan <- message{"[::b]" + tview.Escape(msg), false}
 }
 
 func showErrorMsg(err error, autocomplete bool) {
@@ -110,7 +122,7 @@ func showErrorMsg(err error, autocomplete bool) {
 		return
 	}
 
-	msgchan <- "[red::b]" + tview.Escape(err.Error())
+	msgchan <- message{"[red::b]" + tview.Escape(err.Error()), false}
 }
 
 func showConfirmMsg(msg string, doFunc, resetFunc func()) {
@@ -136,7 +148,7 @@ func showConfirmMsg(msg string, doFunc, resetFunc func()) {
 
 		info += " items"
 
-		msgchan <- "[white]" + info
+		msgchan <- message{"[white]" + info, false}
 	}
 
 	confirm := func() {
@@ -302,7 +314,7 @@ func showMkdirRenameInput(selPane, auxPane *dirPane, key rune) {
 			info = "Renamed '" + origname + "' to '" + newname + "'"
 		}
 
-		msgchan <- info
+		msgchan <- message{info, false}
 	}
 
 	input := getStatusInput(title, false)
