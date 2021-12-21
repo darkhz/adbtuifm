@@ -286,7 +286,7 @@ func setupPane(selPane, auxPane *dirPane) {
 			stopApp()
 
 		case '?':
-			showHelpModal()
+			showHelp()
 
 		case 'h', '.':
 			selPane.setHidden()
@@ -644,4 +644,165 @@ func stopUI() {
 	app.Stop()
 	stopStatus()
 	cancelAllOps()
+}
+
+func showHelp() {
+	var row int
+
+	helpview := tview.NewTable()
+	helpview.SetBackgroundColor(tcell.ColorDefault)
+
+	mainText := map[string]string{
+		"Switch between panes ":      "Tab ",
+		"Navigate between entries ":  "Up, Down",
+		"CD highlighted entry ":      "Enter, Right",
+		"Change one directory back ": "Backspace, Left",
+		"Switch to operations page ": "o",
+		"Switch between ADB/Local ":  "s, <",
+		"Change to any directory ":   "g, >",
+		"Toggle hidden files ":       "h, .",
+		"Execute command":            "!",
+		"Refresh ":                   "r",
+		"Move ":                      "m",
+		"Paste/Put ":                 "p",
+		"Delete ":                    "d",
+		"Open files ":                "Ctrl+o",
+		"Make directory ":            "M",
+		"Rename files/folders ":      "R",
+		"Filter entries":             "/",
+		"Clear filtered entries ":    "Ctrl+r",
+		"Select one item ":           "Space",
+		"Invert selection ":          "a",
+		"Select all items ":          "A",
+		"Edit selection list ":       "S",
+		"Toggle layouts ":            "[",
+		"Swap panes ":                "]",
+		"Reset selections ":          "Esc",
+		"Temporarily exit to shell ": "Ctrl+d",
+		"Quit ":                      "q",
+	}
+
+	opnsText := map[string]string{
+		"Navigate between entries ":  "Up, Down",
+		"Cancel selected operation ": "x",
+		"Cancel all operations ":     "X",
+		"Switch to main page ":       "o, Esc",
+	}
+
+	cdirText := map[string]string{
+		"Navigate between entries ": "Up, Down",
+		"Autocomplete ":             "Tab",
+		"CD to highlighted entry ":  "Enter",
+		"Move back a directory ":    "Ctrl+w",
+		"Switch to main page ":      "Esc",
+	}
+
+	editText := map[string]string{
+		"Select one item ":     "Alt+Space",
+		"Invert selection ":    "Alt+a",
+		"Select all items ":    "Alt+A",
+		"Save edited list ":    "Ctrl+s",
+		"Cancel editing list ": "Esc",
+	}
+
+	execText := map[string]string{
+		"Switch b/w Local/Adb ":       "Ctrl+a",
+		"Switch b/w FG/BG execution ": "Ctrl+q",
+	}
+
+	helpview.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyEscape, tcell.KeyEnter:
+			pages.SwitchToPage("main")
+			app.SetFocus(prevPane.table)
+			prevPane.table.SetSelectable(true, false)
+		}
+
+		switch event.Rune() {
+		case 'q':
+			pages.SwitchToPage("main")
+			stopApp()
+		}
+
+		return event
+	})
+
+	helpview.SetSelectionChangedFunc(func(row, col int) {
+		if row <= 4 {
+			helpview.ScrollToBeginning()
+		} else if row >= helpview.GetRowCount()-4 {
+			helpview.ScrollToEnd()
+		}
+	})
+
+	for i, helpMap := range []map[string]string{
+		mainText,
+		opnsText,
+		cdirText,
+		editText,
+		execText,
+	} {
+		var header string
+
+		switch i {
+		case 0:
+			header = "MAIN PAGE"
+
+		case 1:
+			header = "OPERATIONS PAGE"
+
+		case 2:
+			header = "CHANGE DIRECTORY MODE"
+
+		case 3:
+			header = "EDIT SELECTION MODE"
+
+		case 4:
+			header = "EXECUTION MODE"
+		}
+
+		helpview.SetCell(row, 0, tview.NewTableCell("[::b]["+header+"[]").
+			SetExpansion(1).
+			SetSelectable(false).
+			SetAlign(tview.AlignCenter))
+
+		helpview.SetCell(row, 1, tview.NewTableCell("").
+			SetExpansion(0).
+			SetSelectable(false))
+		row++
+
+		helpview.SetCell(row, 0, tview.NewTableCell("[::bu]Operation").
+			SetExpansion(1).
+			SetSelectable(false).
+			SetAlign(tview.AlignLeft))
+
+		helpview.SetCell(row, 1, tview.NewTableCell("[::bu]Key").
+			SetExpansion(0).
+			SetSelectable(false))
+		row++
+
+		for k, v := range helpMap {
+			helpview.SetCell(row, 0, tview.NewTableCell(k))
+			helpview.SetCell(row, 1, tview.NewTableCell(v))
+
+			row++
+		}
+	}
+
+	exitText := "----- Press Enter/Escape to exit -----"
+
+	helpview.SetCell(row, 0, tview.NewTableCell(exitText).
+		SetExpansion(1).
+		SetSelectable(false).
+		SetAlign(tview.AlignCenter))
+
+	helpview.SetCell(row, 1, tview.NewTableCell("").
+		SetExpansion(0).
+		SetSelectable(false))
+
+	helpview.SetEvaluateAllRows(true)
+
+	app.SetFocus(helpview)
+	helpview.SetSelectable(true, false)
+	pages.AddAndSwitchToPage("help", helpview, true)
 }
