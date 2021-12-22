@@ -193,8 +193,14 @@ func setupPaneView() *tview.Flex {
 	return mainFlex
 }
 
-func setupOpsView() *tview.Table {
+func setupOpsView() *tview.Flex {
 	opsView = tview.NewTable()
+	opsTitle := tview.NewTextView()
+
+	opsFlex := tview.NewFlex().
+		AddItem(opsTitle, 1, 0, false).
+		AddItem(opsView, 0, 1, true).
+		SetDirection(tview.FlexRow)
 
 	exit := func() {
 		if opsView.HasFocus() {
@@ -237,16 +243,16 @@ func setupOpsView() *tview.Table {
 		return event
 	})
 
-	opsView.SetBorder(true)
-	opsView.SetSelectable(false, false)
+	opsView.SetSelectable(true, false)
 
-	opsView.SetTitle("[::bu]Operations")
-	opsView.SetTitleAlign(tview.AlignLeft)
+	opsTitle.SetDynamicColors(true)
+	opsTitle.SetText("[::bu]Operations")
+	opsTitle.SetBackgroundColor(tcell.ColorDefault)
 
 	opsView.SetBorderColor(tcell.ColorDefault)
 	opsView.SetBackgroundColor(tcell.ColorDefault)
 
-	return opsView
+	return opsFlex
 }
 
 //gocyclo:ignore
