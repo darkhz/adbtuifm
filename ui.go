@@ -401,9 +401,11 @@ func resetOpsView() {
 
 	switch {
 	case count/opRowNum == 0:
-		pages.SwitchToPage("main")
-		app.SetFocus(prevPane.table)
-		opsView.SetSelectable(false, false)
+		if opsView.HasFocus() {
+			pages.SwitchToPage("main")
+			app.SetFocus(prevPane.table)
+			opsView.SetSelectable(false, false)
+		}
 
 	case row-1 == count:
 		opsView.Select(row-opRowNum, 0)
