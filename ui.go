@@ -224,9 +224,7 @@ func setupOpsView() *tview.Table {
 			canceltask()
 
 		case 'X':
-			opsView.Clear()
-			go cancelAllOps()
-			fallthrough
+			cancelAllOps()
 
 		case 'o':
 			exit()

@@ -307,44 +307,45 @@ func rmOpsPath(src, dst string) {
 }
 
 func iterOps(all bool, o *operation, cfunc func(row, rows int, op *operation)) {
-	rows := opsView.GetRowCount()
+	app.QueueUpdateDraw(func() {
+		rows := opsView.GetRowCount()
 
-	for i := 0; i < rows; i++ {
-		cell := opsView.GetCell(i, 0)
-		if cell == nil {
-			continue
-		}
-
-		ref := cell.GetReference()
-		if ref == nil {
-			continue
-		}
-
-		op := ref.(*operation)
-		if o != nil {
-			if op != o {
+		for i := 0; i < rows; i++ {
+			cell := opsView.GetCell(i, 0)
+			if cell == nil || cell.NotSelectable {
 				continue
 			}
-		}
 
-		cfunc(i, rows, op)
+			ref := cell.GetReference()
+			if ref == nil {
+				continue
+			}
 
-		if !all {
-			break
+			op := ref.(*operation)
+			if o != nil {
+				if op != o {
+					continue
+				}
+			}
+
+			cfunc(i, rows, op)
+
+			if !all {
+				break
+			}
 		}
-	}
+	})
 }
 
 func (o *operation) jobFinished() {
-	app.QueueUpdateDraw(func() {
-		iterOps(false, o, func(row, rows int, op *operation) {
-			opsView.RemoveRow(row)
-			opsView.RemoveRow(row)
-			opsView.RemoveRow(row - 1)
+	iterOps(false, o, func(row, rows int, op *operation) {
+		opsView.RemoveRow(row)
+		opsView.RemoveRow(row)
+		opsView.RemoveRow(row - 1)
 
-			resetOpsView()
-			jobNum = rows - opRowNum
-		})
+		resetOpsView()
+
+		jobNum = rows - opRowNum
 	})
 }
 
@@ -353,11 +354,11 @@ func (o *operation) cancelOps() {
 }
 
 func cancelAllOps() {
-	iterOps(true, nil, func(row, rows int, op *operation) {
-		op.cancelOps()
-	})
-
-	jobNum = 0
+	go func() {
+		iterOps(true, nil, func(row, rows int, op *operation) {
+			op.cancelOps()
+		})
+	}()
 }
 
 func confirmOperation(selPane, auxPane *dirPane, opmode opsMode, overwrite bool, mselect []selection) {
