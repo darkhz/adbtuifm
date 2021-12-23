@@ -17,7 +17,10 @@ import (
 	"golang.org/x/term"
 )
 
-var pathLock sync.Mutex
+var (
+	dirWidth int
+	pathLock sync.Mutex
+)
 
 func trimName(name string, length int) string {
 	var size, x int
@@ -216,6 +219,10 @@ func (p *dirPane) ChangeDirEvent(cdFwd, cdBack bool) {
 }
 
 func resizeDirEntries(width int) {
+	if dirWidth == width {
+		return
+	}
+
 	for _, pane := range []*dirPane{selPane, auxPane} {
 		if !pane.getLock() {
 			continue
@@ -239,6 +246,8 @@ func resizeDirEntries(width int) {
 
 		pane.setUnlock()
 	}
+
+	dirWidth = width
 }
 
 func (p *dirPane) createDirList(cdFwd, cdBack bool, prevDir string) {

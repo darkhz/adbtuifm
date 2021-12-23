@@ -9,6 +9,7 @@ import (
 )
 
 var (
+	popupWidth int
 	popupOpen  bool
 	popupFlex  *tview.Flex
 	popupModal tview.Primitive
@@ -476,7 +477,13 @@ func resizePopup(width int) {
 		return
 	}
 
+	if popupWidth == width {
+		return
+	}
+
 	popupFlex.ResizeItem(popupModal, width, 0)
+
+	popupWidth = width
 }
 
 func resizemodal(f, m *tview.Flex, t *tview.Table) {
@@ -494,6 +501,10 @@ func resizemodal(f, m *tview.Flex, t *tview.Table) {
 }
 
 func setPopupOpen(open bool, modal tview.Primitive, flex *tview.Flex) {
+	if !open {
+		popupWidth = -1
+	}
+
 	popupOpen = open
 	popupFlex = flex
 	popupModal = modal

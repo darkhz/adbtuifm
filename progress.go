@@ -30,7 +30,10 @@ const (
 
 const opRowNum = 3
 
-var updateLock sync.Mutex
+var (
+	progWidth  int
+	updateLock sync.Mutex
+)
 
 func (o operation) getDescription() string {
 	if o.totalFile <= 1 {
@@ -157,7 +160,7 @@ func (o *operation) setNewProgress(src, dst string, selindex, seltotal int) erro
 func resizeProgress(width int) {
 	var name string
 
-	if !opsView.HasFocus() {
+	if !opsView.HasFocus() || progWidth == width {
 		return
 	}
 
@@ -190,6 +193,8 @@ func resizeProgress(width int) {
 			SetSelectable(false).
 			SetAlign(tview.AlignLeft))
 	}
+
+	progWidth = width
 }
 
 func (o *operation) opSetStatus(status opStatus, err error) {
