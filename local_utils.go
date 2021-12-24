@@ -10,7 +10,6 @@ import (
 	"sort"
 	"strings"
 	"sync"
-	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
 	adb "github.com/zach-klippenstein/goadb"
@@ -22,19 +21,22 @@ var (
 	pathLock sync.Mutex
 )
 
-func trimName(name string, length int) string {
-	var size, x int
+func trimName(name string, length int, rev bool) string {
+	r := []rune(name)
 
-	if len([]rune(name)) < length {
+	if len(r) < length {
 		return name
 	}
 
-	for i := 0; i < length && x < len(name); i++ {
-		_, size = utf8.DecodeRuneInString(name[x:])
-		x += size
+	if (length - 3) < 0 {
+		return "..."
 	}
 
-	return name[:x] + "..."
+	if rev {
+		return "..." + string(r[len(r)-length+3:])
+	}
+
+	return string(r[:length-3]) + "..."
 }
 
 func trimPath(testPath string, cdBack bool) string {
@@ -241,7 +243,7 @@ func resizeDirEntries(width int) {
 
 			refdir := ref.(*adb.DirEntry)
 
-			pane.table.SetCell(i, 0, cell.SetText(trimName(refdir.Name, width-40)))
+			pane.table.SetCell(i, 0, cell.SetText(trimName(refdir.Name, width-40, false)))
 		}
 
 		pane.setUnlock()

@@ -181,11 +181,7 @@ func resizeProgress(width int) {
 		}
 
 		text := ref.(string)
-		if len([]rune(text)) < width {
-			name = text
-		} else if len([]rune(text)) > width-10 {
-			name = trimName(text, width-10)
-		}
+		name = trimName(text, width-10, false)
 
 		opsView.SetCell(i, 1, tview.NewTableCell(name).
 			SetExpansion(1).
