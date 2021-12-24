@@ -258,6 +258,12 @@ func (p *dirPane) createDirList(cdFwd, cdBack bool, prevDir string) {
 	app.QueueUpdateDraw(func() {
 		var pos int
 
+		if p.filter {
+			p.setPaneSelectable(true)
+			p.table.ScrollToBeginning()
+			return
+		}
+
 		p.table.Clear()
 
 		totalrows := len(p.pathList)

@@ -14,6 +14,7 @@ type dirPane struct {
 	path     string
 	apath    string
 	dpath    string
+	filter   bool
 	hidden   bool
 	mode     ifaceMode
 	table    *tview.Table

@@ -216,6 +216,7 @@ func (p *dirPane) showFilterInput() {
 	input := getStatusInput("Filter entries:", false)
 
 	exit := func() {
+		p.filter = false
 		filterInput = input.GetText()
 		statuspgs.SwitchToPage("statusmsg")
 		app.SetFocus(prevPane.table)
@@ -234,6 +235,8 @@ func (p *dirPane) showFilterInput() {
 			return
 		}
 		defer p.setUnlock()
+
+		p.filter = true
 
 		p.table.Clear()
 
