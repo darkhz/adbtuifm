@@ -1,6 +1,8 @@
 package main
 
 import (
+	"path/filepath"
+
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	adb "github.com/zach-klippenstein/goadb"
@@ -584,8 +586,18 @@ func (p *dirPane) setPaneTitle() {
 		p.path = trimPath(p.path, false)
 	}
 
-	title := "[::bu]" + prefix + ": " + tview.Escape(p.path)
-	p.title.SetText(title)
+	dpath := tview.Escape(p.path)
+	_, _, titleWidth, _ := p.title.GetRect()
+
+	if len(dpath) > titleWidth {
+		dir := trimPath(dpath, true)
+		base := filepath.Base(dpath)
+
+		dir = trimName(dir, titleWidth-len(base)-20, true)
+		dpath = dir + base
+	}
+
+	p.title.SetText("[::bu]" + prefix + ": " + dpath)
 }
 
 func (p *dirPane) setPaneSelectable(status bool) {

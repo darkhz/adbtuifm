@@ -246,6 +246,8 @@ func resizeDirEntries(width int) {
 			pane.table.SetCell(i, 0, cell.SetText(trimName(refdir.Name, width-40, false)))
 		}
 
+		pane.setPaneTitle()
+
 		pane.setUnlock()
 	}
 
