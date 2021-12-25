@@ -225,10 +225,11 @@ func resizeDirEntries(width int) {
 		return
 	}
 
-	for _, pane := range []*dirPane{selPane, auxPane} {
-		if !pane.getLock() {
-			continue
-		}
+	go func() {
+		for _, pane := range []*dirPane{selPane, auxPane} {
+			if !pane.getLock() {
+				continue
+			}
 
 		for i, _ := range pane.pathList {
 			cell := pane.table.GetCell(i, 0)
@@ -246,10 +247,13 @@ func resizeDirEntries(width int) {
 			pane.table.SetCell(i, 0, cell.SetText(trimName(refdir.Name, width-40, false)))
 		}
 
-		pane.setPaneTitle()
+			app.QueueUpdateDraw(func() {
+				pane.setPaneTitle()
+			})
 
-		pane.setUnlock()
-	}
+			pane.setUnlock()
+		}
+	}()
 
 	dirWidth = width
 }
