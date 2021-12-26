@@ -8,16 +8,19 @@ import (
 	"github.com/rivo/tview"
 )
 
-var (
-	popupWidth int
-	popupOpen  bool
-	popupFlex  *tview.Flex
-	popupModal tview.Primitive
-)
+type popupModal struct {
+	width      int
+	open       bool
+	table      *tview.Table
+	modal      *tview.Flex
+	origFlex   *tview.Flex
+	statusFlex *tview.Flex
+}
+
+var popup popupModal
 
 //gocyclo:ignore
 func changeDirSelect(pane *dirPane, input *tview.InputField) {
-	var modal *tview.Flex
 	var cdfilter, cdrefresh bool
 	var entries, entrycache []string
 
@@ -67,7 +70,7 @@ func changeDirSelect(pane *dirPane, input *tview.InputField) {
 				pages.SwitchToPage("cdmodal").ShowPage("main")
 			}
 
-			resizemodal(flex, modal, cdtable)
+			resizemodal()
 		}
 
 		app.SetFocus(input)
@@ -151,7 +154,7 @@ func changeDirSelect(pane *dirPane, input *tview.InputField) {
 			fallthrough
 
 		case tcell.KeyEscape:
-			setPopupOpen(false, nil, nil)
+			popupStatus(false)
 			pages.SwitchToPage("main")
 			statuspgs.SwitchToPage("statusmsg")
 			app.SetFocus(pane.table)
@@ -207,8 +210,7 @@ func changeDirSelect(pane *dirPane, input *tview.InputField) {
 	cdtable.SetSelectable(true, false)
 	cdtable.SetBackgroundColor(tcell.ColorLightGrey)
 
-	view, modal := statusmodal(flex)
-	pages.AddPage("cdmodal", view, true, false).ShowPage("main")
+	pages.AddPage("cdmodal", statusmodal(flex, cdtable), true, false).ShowPage("main")
 
 	autocompletefunc(pane.getPath(), false)
 }
@@ -220,7 +222,6 @@ func editSelections(input, sinput *tview.InputField) *tview.InputField {
 	}
 
 	var row int
-	var modal *tview.Flex
 
 	empty := struct{}{}
 	delpaths := make(map[string]struct{}, len(multiselection))
@@ -243,7 +244,7 @@ func editSelections(input, sinput *tview.InputField) *tview.InputField {
 	}
 
 	exit := func() {
-		setPopupOpen(false, nil, nil)
+		popupStatus(false)
 		pages.SwitchToPage("main")
 
 		sel := len(multiselection) != 0
@@ -357,7 +358,7 @@ func editSelections(input, sinput *tview.InputField) *tview.InputField {
 				app.SetFocus(input)
 			}
 
-			resizemodal(flex, modal, seltable)
+			resizemodal()
 
 			return
 		}
@@ -381,7 +382,7 @@ func editSelections(input, sinput *tview.InputField) *tview.InputField {
 				pages.SwitchToPage("editmodal").ShowPage("main")
 			}
 
-			resizemodal(flex, modal, seltable)
+			resizemodal()
 		}
 
 		app.SetFocus(input)
@@ -465,67 +466,66 @@ func editSelections(input, sinput *tview.InputField) *tview.InputField {
 	seltable.SetSelectable(true, false)
 	seltable.SetBackgroundColor(tcell.ColorLightGrey)
 
-	view, modal := statusmodal(flex)
-	resizemodal(flex, modal, seltable)
-	pages.AddAndSwitchToPage("editmodal", view, true).ShowPage("main")
+	pages.AddAndSwitchToPage("editmodal", statusmodal(flex, seltable), true).ShowPage("main")
 
 	return input
 }
 
 func resizePopup(width int) {
-	if !popupOpen {
+	if !popup.open || popup.width == width {
 		return
 	}
 
-	if popupWidth == width {
-		return
-	}
+	resizemodal()
 
-	popupFlex.ResizeItem(popupModal, width, 0)
-
-	popupWidth = width
+	popup.width = width
 }
 
-func resizemodal(f, m *tview.Flex, t *tview.Table) {
-	height := t.GetRowCount()
+func popupStatus(status bool) {
+	if !status {
+		popup.width = -1
+	}
 
-	_, _, _, screenHeight := pages.GetRect()
+	popup.open = status
+}
+
+func resizemodal() {
+	height := popup.table.GetRowCount()
+
+	_, _, screenWidth, screenHeight := pages.GetRect()
 	screenHeight /= 4
 
 	if height > screenHeight {
 		height = screenHeight
 	}
 
-	f.ResizeItem(t, height, 0)
-	m.ResizeItem(f, height, 0)
+	popup.origFlex.ResizeItem(popup.table, height, 0)
+	popup.modal.ResizeItem(popup.origFlex, height, 0)
+	popup.statusFlex.ResizeItem(popup.modal, screenWidth, 0)
 }
 
-func setPopupOpen(open bool, modal tview.Primitive, flex *tview.Flex) {
-	if !open {
-		popupWidth = -1
-	}
-
-	popupOpen = open
-	popupFlex = flex
-	popupModal = modal
-}
-
-func statusmodal(v tview.Primitive) (tview.Primitive, *tview.Flex) {
+func statusmodal(v, t tview.Primitive) tview.Primitive {
 	_, _, _, screenHeight := pages.GetRect()
 	screenHeight /= 4
 
-	modal := tview.NewFlex().
+	stmodal := tview.NewFlex().
 		AddItem(nil, 0, 1, false).
 		AddItem(v, screenHeight, 1, false).
 		AddItem(nil, 1, 1, false).
 		SetDirection(tview.FlexRow)
 
-	flex := tview.NewFlex().
+	stflex := tview.NewFlex().
 		AddItem(nil, 0, 1, false).
-		AddItem(modal, 10, 1, false).
+		AddItem(stmodal, 10, 1, false).
 		AddItem(nil, 0, 1, false)
 
-	setPopupOpen(true, modal, flex)
+	popup.modal = stmodal
+	popup.table = t.(*tview.Table)
 
-	return flex, modal
+	popup.statusFlex = stflex
+	popup.origFlex = v.(*tview.Flex)
+
+	popupStatus(true)
+
+	return stflex
 }
