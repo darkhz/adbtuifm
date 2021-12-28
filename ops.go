@@ -165,10 +165,12 @@ func startOperation(srcPane, dstPane *dirPane, opmode opsMode, overwrite bool, m
 
 	op.opSetStatus(opDone, err)
 
-	srcPane.ChangeDir(false, false)
-
-	if dstPane.table != nil {
+	reloadpath := trimPath(dst, true)
+	if dstPane.getPath() == reloadpath {
 		dstPane.ChangeDir(false, false)
+	}
+	if srcPane.getPath() == reloadpath && srcPane.mode == dstPane.mode {
+		srcPane.ChangeDir(false, false)
 	}
 
 	return dst, err

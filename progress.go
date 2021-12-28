@@ -157,42 +157,6 @@ func (o *operation) setNewProgress(src, dst string, selindex, seltotal int) erro
 	return nil
 }
 
-func resizeProgress(width int) {
-	var name string
-
-	if !opsView.HasFocus() || progWidth == width {
-		return
-	}
-
-	rows := opsView.GetRowCount()
-	if rows <= 0 {
-		return
-	}
-
-	for i := 0; i < rows; i++ {
-		cell := opsView.GetCell(i, 1)
-		if cell == nil {
-			continue
-		}
-
-		ref := cell.GetReference()
-		if ref == nil {
-			continue
-		}
-
-		text := ref.(string)
-		name = trimName(text, width-10, false)
-
-		opsView.SetCell(i, 1, tview.NewTableCell(name).
-			SetExpansion(1).
-			SetReference(text).
-			SetSelectable(false).
-			SetAlign(tview.AlignLeft))
-	}
-
-	progWidth = width
-}
-
 func (o *operation) opSetStatus(status opStatus, err error) {
 	updateLock.Lock()
 	defer updateLock.Unlock()
@@ -216,11 +180,13 @@ func (o *operation) opSetStatus(status opStatus, err error) {
 		o.jobFinished()
 	}
 
-	if jobNum > 0 {
-		text := strconv.Itoa(jobNum/opRowNum) + " job(s) are running"
-		msgchan <- message{text, true}
-	} else {
-		msgchan <- message{"", true}
+	if o.opmode != opRename && o.opmode != opMkdir {
+		if jobNum > 0 {
+			text := strconv.Itoa(jobNum/opRowNum) + " job(s) are running"
+			msgchan <- message{text, true}
+		} else {
+			msgchan <- message{"", true}
+		}
 	}
 }
 

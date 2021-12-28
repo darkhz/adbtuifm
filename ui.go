@@ -14,6 +14,7 @@ type dirPane struct {
 	path     string
 	apath    string
 	dpath    string
+	finput   string
 	filter   bool
 	hidden   bool
 	mode     ifaceMode
@@ -95,7 +96,6 @@ func setupUI() {
 		width, _ := t.Size()
 
 		resizePopup(width)
-		resizeProgress(width)
 		resizeDirEntries(width)
 
 		return false
@@ -274,7 +274,7 @@ func setupPane(selPane, auxPane *dirPane) {
 			go selPane.openFileHandler()
 
 		case tcell.KeyCtrlR:
-			selPane.reselect(false)
+			selPane.reselect(true)
 
 		case tcell.KeyEnter, tcell.KeyRight:
 			selPane.ChangeDirEvent(true, false)
@@ -380,7 +380,7 @@ func opsPage() {
 }
 
 func paneswitch(selPane, auxPane *dirPane) {
-	auxPane.reselect(true)
+	auxPane.reselect(false)
 	app.SetFocus(auxPane.table)
 	selPane.table.SetSelectable(false, false)
 	auxPane.table.SetSelectable(true, false)
@@ -392,6 +392,11 @@ func reset(selPane, auxPane *dirPane) {
 
 	selPane.table.SetSelectable(false, false)
 	selPane.reselect(true)
+
+	if selPane.mode == auxPane.mode &&
+		selPane.getPath() == auxPane.getPath() {
+		auxPane.reselect(true)
+	}
 
 	app.SetFocus(selPane.table)
 	selPane.table.SetSelectable(true, false)
@@ -430,8 +435,8 @@ func swapLayout(selPane, auxPane *dirPane) {
 
 	mainFlex.AddItem(statuspgs, 1, 0, false)
 
-	selPane.reselect(true)
-	auxPane.reselect(true)
+	selPane.reselect(false)
+	auxPane.reselect(false)
 }
 
 func swapPanes(selPane, auxPane *dirPane) {
@@ -502,23 +507,43 @@ func multiselect(selPane *dirPane, key rune) {
 	selPane.multiSelectHandler(all, inverse, totalrows)
 }
 
-func (p *dirPane) reselect(psel bool) {
+func (p *dirPane) reselect(force bool) {
 	if !p.getLock() {
 		return
 	}
 	defer p.setUnlock()
 
-	for row, dir := range p.pathList {
-		checksel := checkSelected(p.path, dir.Name, false)
-		p.updateDirPane(row, checksel, nil, dir)
+	if p.filter && !force {
+		for row := 0; row < p.table.GetRowCount(); row++ {
+			cell := p.table.GetCell(row, 0)
+			if cell == nil {
+				continue
+			}
+
+			ref := cell.GetReference()
+			if ref == nil {
+				continue
+			}
+
+			dir := ref.(*adb.DirEntry)
+
+			checksel := checkSelected(p.path, dir.Name, false)
+			p.updateDirPane(row, checksel, dir)
+		}
+	} else {
+		for row, dir := range p.pathList {
+			checksel := checkSelected(p.path, dir.Name, false)
+			p.updateDirPane(row, checksel, dir)
+		}
+
+		p.filter = false
 	}
 
 	pos, _ := p.table.GetSelection()
 	p.table.Select(pos, 0)
-	p.table.ScrollToBeginning()
 }
 
-func (p *dirPane) updateDirPane(row int, sel bool, cells []*tview.TableCell, dir *adb.DirEntry) {
+func (p *dirPane) updateDirPane(row int, sel bool, dir *adb.DirEntry) {
 	entry := getListEntry(dir)
 
 	for col, dname := range entry {
@@ -538,6 +563,9 @@ func (p *dirPane) updateDirPane(row int, sel bool, cells []*tview.TableCell, dir
 			}
 
 			cell.SetSelectable(false)
+		} else {
+			_, _, w, _ := pages.GetRect()
+			cell.SetMaxWidth(w - 40)
 		}
 
 		p.table.SetCell(row, col, cell.SetTextColor(color).

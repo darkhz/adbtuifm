@@ -147,7 +147,7 @@ func (p *dirPane) multiSelectHandler(all, inverse bool, totalrows int) {
 			addmsel(fullpath, p.mode)
 		}
 
-		p.updateDirPane(i, !checksel, nil, dir)
+		p.updateDirPane(i, !checksel, dir)
 
 		if mselone {
 			if i+1 < totalrows {
@@ -241,8 +241,6 @@ func (p *dirPane) openFileHandler() {
 
 	select {
 	case <-modify:
-		showInfoMsg(fmt.Sprintf("Overwriting modified '%s'", name))
-
 		_, err = startOperation(
 			p,
 			&dirPane{path: fpath, mode: p.mode},
@@ -250,12 +248,17 @@ func (p *dirPane) openFileHandler() {
 			true,
 			[]selection{{tmpdst, mLocal}},
 		)
+
 		if err != nil {
 			showErrorMsg(
 				fmt.Errorf("Unable to save '%s': %s", name, err.Error()),
 				false,
 			)
+
+			return
 		}
+
+		showInfoMsg(fmt.Sprintf("Overwriting modified '%s'", name))
 
 	default:
 	}

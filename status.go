@@ -26,8 +26,6 @@ var (
 
 	sctx    context.Context
 	scancel context.CancelFunc
-
-	filterInput string
 )
 
 func startStatus() {
@@ -216,15 +214,14 @@ func (p *dirPane) showFilterInput() {
 	input := getStatusInput("Filter entries:", false)
 
 	exit := func() {
-		p.filter = false
-		filterInput = input.GetText()
+		p.finput = input.GetText()
 		statuspgs.SwitchToPage("statusmsg")
 		app.SetFocus(prevPane.table)
 	}
 
 	input.SetChangedFunc(func(text string) {
 		if text == "" {
-			p.reselect(false)
+			p.reselect(true)
 			p.table.Select(0, 0)
 			p.table.ScrollToBeginning()
 
@@ -248,7 +245,7 @@ func (p *dirPane) showFilterInput() {
 			) {
 				sel := checkSelected(p.path, dir.Name, false)
 
-				p.updateDirPane(row, sel, nil, dir)
+				p.updateDirPane(row, sel, dir)
 				row++
 			}
 		}
@@ -260,7 +257,7 @@ func (p *dirPane) showFilterInput() {
 	input.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
 		case tcell.KeyCtrlR:
-			p.reselect(false)
+			p.reselect(true)
 
 		case tcell.KeyUp, tcell.KeyDown:
 			p.table.InputHandler()(event, nil)
@@ -273,7 +270,7 @@ func (p *dirPane) showFilterInput() {
 		return event
 	})
 
-	input.SetText(filterInput)
+	input.SetText(p.finput)
 
 	statuspgs.AddAndSwitchToPage("filter", input, true)
 	app.SetFocus(input)
@@ -281,6 +278,7 @@ func (p *dirPane) showFilterInput() {
 
 func showMkdirRenameInput(selPane, auxPane *dirPane, key rune) {
 	var title string
+	var rename bool
 
 	row, _ := selPane.table.GetSelection()
 
@@ -293,9 +291,11 @@ func showMkdirRenameInput(selPane, auxPane *dirPane, key rune) {
 
 	switch key {
 	case 'M':
+		rename = false
 		title = "Make directory:"
 
 	case 'R':
+		rename = true
 		title = "Rename To:"
 	}
 
@@ -321,7 +321,9 @@ func showMkdirRenameInput(selPane, auxPane *dirPane, key rune) {
 	}
 
 	input := getStatusInput(title, false)
-	input.SetText(origname)
+	if rename {
+		input.SetText(origname)
+	}
 
 	input.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {

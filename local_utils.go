@@ -17,8 +17,9 @@ import (
 )
 
 var (
-	dirWidth int
-	pathLock sync.Mutex
+	dirWidth  int
+	dirLayout bool
+	pathLock  sync.Mutex
 )
 
 func trimName(name string, length int, rev bool) string {
@@ -215,13 +216,13 @@ func (p *dirPane) ChangeDir(cdFwd, cdBack bool, tpath ...string) {
 }
 
 func (p *dirPane) ChangeDirEvent(cdFwd, cdBack bool) {
-	filterInput = ""
+	p.finput = ""
 
 	p.ChangeDir(cdFwd, cdBack)
 }
 
 func resizeDirEntries(width int) {
-	if dirWidth == width {
+	if dirWidth == width && dirLayout == layoutToggle {
 		return
 	}
 
@@ -231,24 +232,20 @@ func resizeDirEntries(width int) {
 				continue
 			}
 
-		for i, _ := range pane.pathList {
-			cell := pane.table.GetCell(i, 0)
-			if cell == nil {
-				continue
-			}
-
-			ref := cell.GetReference()
-			if ref == nil {
-				continue
-			}
-
-			refdir := ref.(*adb.DirEntry)
-
-			pane.table.SetCell(i, 0, cell.SetText(trimName(refdir.Name, width-40, false)))
-		}
-
 			app.QueueUpdateDraw(func() {
+				for i := 0; i < pane.table.GetRowCount(); i++ {
+					cell := pane.table.GetCell(i, 0)
+					if cell == nil {
+						continue
+					}
+
+					cell.SetMaxWidth(width - 40)
+				}
+
 				pane.setPaneTitle()
+
+				pos, _ := pane.table.GetSelection()
+				pane.table.SetOffset(pos, 0)
 			})
 
 			pane.setUnlock()
@@ -256,6 +253,7 @@ func resizeDirEntries(width int) {
 	}()
 
 	dirWidth = width
+	dirLayout = layoutToggle
 }
 
 func (p *dirPane) createDirList(cdFwd, cdBack bool, prevDir string) {
@@ -289,14 +287,13 @@ func (p *dirPane) createDirList(cdFwd, cdBack bool, prevDir string) {
 
 			sel := checkSelected(p.path, dir.Name, false)
 
-			p.updateDirPane(row, sel, nil, dir)
+			p.updateDirPane(row, sel, dir)
 		}
 
-		p.table.Select(pos, 0)
-		p.table.ScrollToBeginning()
-
 		p.setPaneTitle()
+		p.table.Select(pos, 0)
 		p.setPaneSelectable(true)
+		p.table.ScrollToBeginning()
 	})
 }
 

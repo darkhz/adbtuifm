@@ -270,7 +270,7 @@ func editSelections(input, sinput *tview.InputField) *tview.InputField {
 
 		delpaths = nil
 
-		prevPane.reselect(true)
+		prevPane.reselect(false)
 		exit()
 	}
 
