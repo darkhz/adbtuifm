@@ -114,7 +114,7 @@ Flags:
 |Switch between Foreground/Background execution|<kbd>Ctrl</kbd>+<kbd>q</kbd>|
 
 # Notes
-- As of v0.5.1, keybindings have been revised and the UI has been revamped.<br />
+- As of v0.5.5, keybindings have been revised and the UI has been revamped.<br />
 
 - More information about an entry will be shown only in the **top-down** layout.<br />
 
