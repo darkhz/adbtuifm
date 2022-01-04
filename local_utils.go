@@ -394,13 +394,26 @@ func setEntryColor(col int, sel bool, perms string) (tcell.Color, tcell.AttrMask
 	return tcell.ColorWhite, tcell.AttrNone
 }
 
-func execCmd(cmdtext, emode string) (*exec.Cmd, error) {
+func execCmd(cmdtext, emode, imode string) (*exec.Cmd, error) {
 	var err error
 	var cmd *exec.Cmd
 
 	shell := os.Getenv("SHELL")
 	if shell == "" {
 		shell = "sh"
+	}
+
+	if imode == "Adb" {
+		_, err := getAdb()
+		if err != nil {
+			if cmdtext == "" {
+				showErrorMsg(err, false)
+			}
+
+			return nil, err
+		}
+
+		cmdtext = "adb shell " + cmdtext
 	}
 
 	if cmdtext == "" {

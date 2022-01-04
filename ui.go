@@ -89,10 +89,19 @@ func setupUI() {
 			return nil
 
 		case tcell.KeyCtrlD:
-			execCmd("", "Foreground")
+			execCmd("", "Foreground", "Local")
 
 		case tcell.KeyCtrlZ:
 			appSuspend = true
+		}
+
+		if event.Modifiers() != tcell.ModAlt {
+			return event
+		}
+
+		switch event.Rune() {
+		case 'd':
+			execCmd("", "Foreground", "Adb")
 		}
 
 		return event

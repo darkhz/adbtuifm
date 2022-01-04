@@ -227,7 +227,7 @@ func (p *dirPane) openFileHandler() {
 		}
 	}()
 
-	cmd, err := execCmd(fmt.Sprintf("xdg-open '%s'", tmpdst), "Background")
+	cmd, err := execCmd(fmt.Sprintf("xdg-open '%s'", tmpdst), "Background", "Local")
 	if err != nil {
 		showErrorMsg(err, false)
 		return

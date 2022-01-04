@@ -395,15 +395,10 @@ func execCommand() {
 			return
 		}
 
-		if imode == "Adb" {
-			if !checkAdb() {
-				return
-			}
-
-			cmdtext = "adb shell " + cmdtext
+		_, err := execCmd(cmdtext, emode, imode)
+		if err != nil {
+			showErrorMsg(err, false)
 		}
-
-		execCmd(cmdtext, emode)
 	}
 
 	input.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
