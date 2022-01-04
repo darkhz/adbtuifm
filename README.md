@@ -49,37 +49,38 @@ Flags:
 # Keybindings
 
 ## Main Page
-|Operation                                 |Key                                 |
-|------------------------------------------|------------------------------------|
-|Switch between panes                      |<kbd>Tab</kbd>                      |
-|Navigate between entries                  |<kbd>Up</kbd>/<kbd>Down</kbd>       |
-|Change directory to highlighted entry     |<kbd>Enter</kbd>/<kbd>Right</kbd>   |
-|Change one directory back                 |<kbd>Backspace</kbd>/<kbd>Left</kbd>|
-|Switch to operations page                 |<kbd>o</kbd>                        |
-|Switch between ADB/Local (in each pane)   |<kbd>s</kbd>/<kbd><</kbd>           |
-|Change to any directory                   |<kbd>g</kbd>/<kbd>></kbd>           |
-|Toggle hidden files                       |<kbd>h</kbd>/<kbd>.</kbd>           |
-|Execute command                           |<kbd>!</kbd>                        |
-|Refresh                                   |<kbd>r</kbd>                        |
-|Move                                      |<kbd>m</kbd>                        |
-|Put/Paste (duplicate existing entry)      |<kbd>p</kbd>                        |
-|Put/Paste (don't duplicate existing entry)|<kbd>P</kbd>                        |
-|Delete                                    |<kbd>d</kbd>                        |
-|Open files                                |<kbd>Ctrl</kbd>+<kbd>o</kbd>        |
-|Filter entries                            |<kbd>/</kbd>                        |
-|Clear filtered entries                    |<kbd>Ctrl</kbd>+<kbd>r</kbd>        |
-|Select one item                           |<kbd>Space</kbd>                    |
-|Inverse selection                         |<kbd>a</kbd>                        |
-|Select all items                          |<kbd>A</kbd>                        |
-|Edit selection list                       |<kbd>S</kbd>                        |
-|Make directory                            |<kbd>M</kbd>                        |
-|Toggle top-down/right-left layout         |<kbd>[</kbd>                        |
-|Swap panes                                |<kbd>]</kbd>                        |
-|Rename files/folders                      |<kbd>R</kbd>                        |
-|Reset selections                          |<kbd>Esc</kbd>                      |
-|Temporarily exit to shell                 |<kbd>Ctrl</kbd>+<kbd>d</kbd>        |
-|Help                                      |<kbd>?</kbd>                        |
-|Quit                                      |<kbd>q</kbd>                        |
+| Operation                                  | Key                                                      |
+| ------------------------------------------ | -------------------------------------------------------- |
+| Switch between panes                       | <kbd>Tab</kbd>                                           |
+| Navigate between entries                   | <kbd>Up</kbd>/<kbd>Down</kbd>                            |
+| Change directory to highlighted entry      | <kbd>Enter</kbd>/<kbd>Right</kbd>                        |
+| Change one directory back                  | <kbd>Backspace</kbd>/<kbd>Left</kbd>                     |
+| Switch to operations page                  | <kbd>o</kbd>                                             |
+| Switch between ADB/Local (in each pane)    | <kbd>s</kbd>/<kbd><</kbd>                                |
+| Change to any directory                    | <kbd>g</kbd>/<kbd>></kbd>                                |
+| Toggle hidden files                        | <kbd>h</kbd>/<kbd>.</kbd>                                |
+| Execute command                            | <kbd>!</kbd>                                             |
+| Refresh                                    | <kbd>r</kbd>                                             |
+| Move                                       | <kbd>m</kbd>                                             |
+| Put/Paste (duplicate existing entry)       | <kbd>p</kbd>                                             |
+| Put/Paste (don't duplicate existing entry) | <kbd>P</kbd>                                             |
+| Delete                                     | <kbd>d</kbd>                                             |
+| Open files                                 | <kbd>Ctrl</kbd>+<kbd>o</kbd>                             |
+| Filter entries                             | <kbd>/</kbd>                                             |
+| Clear filtered entries                     | <kbd>Ctrl</kbd>+<kbd>r</kbd>                             |
+| Select one item                            | <kbd>Space</kbd>                                         |
+| Inverse selection                          | <kbd>a</kbd>                                             |
+| Select all items                           | <kbd>A</kbd>                                             |
+| Edit selection list                        | <kbd>S</kbd>                                             |
+| Make directory                             | <kbd>M</kbd>                                             |
+| Toggle top-down/right-left layout          | <kbd>[</kbd>                                             |
+| Swap panes                                 | <kbd>]</kbd>                                             |
+| Rename files/folders                       | <kbd>R</kbd>                                             |
+| Reset selections                           | <kbd>Esc</kbd>                                           |
+| Suspend to shell                           | <kbd>Ctrl</kbd>+<kbd>z</kbd>                             |
+| Launch local/ADB shell                     | <kbd>Ctrl</kbd>+<kbd>d</kbd>/<kbd>Alt</kbd>+<kbd>d</kbd> |
+| Help                                       | <kbd>?</kbd>                                             |
+| Quit                                       | <kbd>q</kbd>                                             |
 
 ## Operations Page
 |Operation                |Key                          |
