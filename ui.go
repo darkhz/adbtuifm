@@ -2,6 +2,7 @@ package main
 
 import (
 	"path/filepath"
+	"syscall"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -45,6 +46,8 @@ var (
 	boxVertical       *tview.Box
 	boxHorizontal     *tview.Box
 	boxTitleSeparator *tview.Box
+
+	appSuspend bool
 )
 
 func newDirPane(selpane bool) *dirPane {
@@ -87,6 +90,9 @@ func setupUI() {
 
 		case tcell.KeyCtrlD:
 			execCmd("", "Foreground")
+
+		case tcell.KeyCtrlZ:
+			appSuspend = true
 		}
 
 		return event
@@ -95,6 +101,7 @@ func setupUI() {
 	app.SetBeforeDrawFunc(func(t tcell.Screen) bool {
 		width, _ := t.Size()
 
+		suspendUI(t)
 		resizePopup(width)
 		resizeDirEntries(width)
 
@@ -364,6 +371,18 @@ func setupPane(selPane, auxPane *dirPane) {
 	})
 
 	selPane.ChangeDir(false, false)
+}
+
+func suspendUI(t tcell.Screen) {
+	if !appSuspend {
+		return
+	}
+
+	t.Suspend()
+	syscall.Kill(syscall.Getpid(), syscall.SIGSTOP)
+	t.Resume()
+
+	appSuspend = false
 }
 
 func opsPage() {
