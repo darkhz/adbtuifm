@@ -260,7 +260,7 @@ func (p *dirPane) createDirList(cdFwd, cdBack bool, prevDir string) {
 	app.QueueUpdateDraw(func() {
 		var pos int
 
-		if p.filter {
+		if p.filter && (!cdFwd && !cdBack) {
 			p.setPaneSelectable(true)
 			p.table.ScrollToBeginning()
 			return
