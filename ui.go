@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"path/filepath"
 	"syscall"
 
@@ -577,6 +578,13 @@ func (p *dirPane) updateDirPane(row int, sel bool, dir *adb.DirEntry) {
 	for col, dname := range entry {
 		if !layoutToggle && col > 0 {
 			dname = ""
+		}
+
+		if col == 0 {
+			mode := dir.Mode&os.ModeDir != 0
+			if len(dname) > 0 && mode {
+				dname += "/"
+			}
 		}
 
 		color, attr := setEntryColor(col, sel, entry[1])

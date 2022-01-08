@@ -132,7 +132,6 @@ func (p *dirPane) localListDir(testPath string, autocomplete bool) ([]string, bo
 
 		if entry.IsDir() || isLocalSymDir(testPath, name) {
 			dlist = append(dlist, filepath.Join(testPath, name))
-			name = name + "/"
 		}
 
 		if autocomplete {

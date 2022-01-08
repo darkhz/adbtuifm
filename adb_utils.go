@@ -184,7 +184,6 @@ func (p *dirPane) adbListDir(testPath string, autocomplete bool) ([]string, bool
 
 		if ent.Mode&os.ModeDir != 0 {
 			dlist = append(dlist, filepath.Join(testPath, name))
-			ent.Name = name + "/"
 		}
 
 		if autocomplete {
