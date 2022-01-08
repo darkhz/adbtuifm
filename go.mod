@@ -5,6 +5,7 @@ go 1.16
 require (
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
 	github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137 // indirect
+	github.com/darkhz/tview v0.0.0-20220107161156-11bd24e95a5c // indirect
 	github.com/dolmen-go/contextio v0.0.0-20210803191544-7a4579021851
 	github.com/fsnotify/fsnotify v1.5.1
 	github.com/gdamore/encoding v1.0.0 // indirect
@@ -23,5 +24,3 @@ require (
 	golang.org/x/text v0.3.7 // indirect
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 )
-
-replace github.com/rivo/tview v0.0.0-20211202162923-2a6de950f73b => github.com/darkhz/tview v0.0.0-20211228172150-5800db7c6a6b
