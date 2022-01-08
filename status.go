@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -211,12 +212,32 @@ func showConfirmMsg(msg string, doFunc, resetFunc func()) {
 }
 
 func (p *dirPane) showFilterInput() {
-	input := getStatusInput("Filter entries:", false)
+	var regex bool
+
+	input := getStatusInput("", false)
+
+	inputlabel := func() {
+		var mode string
+
+		if regex {
+			mode = "regex"
+		} else {
+			mode = "normal"
+		}
+
+		label := fmt.Sprintf("[::b]Filter (%s): ", mode)
+		input.SetLabel(label)
+	}
 
 	exit := func() {
 		p.finput = input.GetText()
 		statuspgs.SwitchToPage("statusmsg")
 		app.SetFocus(prevPane.table)
+	}
+
+	filter := func(row int, dir *adb.DirEntry) {
+		sel := checkSelected(p.path, dir.Name, false)
+		p.updateDirPane(row, sel, dir)
 	}
 
 	input.SetChangedFunc(func(text string) {
@@ -239,13 +260,26 @@ func (p *dirPane) showFilterInput() {
 
 		var row int
 		for _, dir := range p.pathList {
+			if regex {
+				re, err := regexp.Compile(text)
+				if err != nil {
+					return
+				}
+
+				match := re.Match([]byte(dir.Name))
+				if match {
+					filter(row, dir)
+					row++
+				}
+
+				continue
+			}
+
 			if strings.Contains(
 				strings.ToLower(dir.Name),
 				strings.ToLower(text),
 			) {
-				sel := checkSelected(p.path, dir.Name, false)
-
-				p.updateDirPane(row, sel, dir)
+				filter(row, dir)
 				row++
 			}
 		}
@@ -259,6 +293,10 @@ func (p *dirPane) showFilterInput() {
 		case tcell.KeyCtrlR:
 			p.reselect(true)
 
+		case tcell.KeyCtrlF:
+			regex = !regex
+			inputlabel()
+
 		case tcell.KeyUp, tcell.KeyDown:
 			p.table.InputHandler()(event, nil)
 			fallthrough
@@ -271,6 +309,8 @@ func (p *dirPane) showFilterInput() {
 	})
 
 	input.SetText(p.finput)
+
+	inputlabel()
 
 	statuspgs.AddAndSwitchToPage("filter", input, true)
 	app.SetFocus(input)
