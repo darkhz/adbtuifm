@@ -392,6 +392,84 @@ func showMkdirRenameInput(selPane, auxPane *dirPane, key rune) {
 	app.SetFocus(input)
 }
 
+func (p *dirPane) showSortDirInput() {
+	input := getStatusInput("", true)
+
+	sortmethods := []string{
+		"asc",
+		"desc",
+		"filetype",
+		"date",
+		"name",
+	}
+
+	inputlabel := func() {
+		label := "[::b]Sort by: "
+		sortmethod, arrange := p.getSortMethod()
+
+		for _, st := range sortmethods {
+			if st == sortmethod || st == arrange {
+				label += "*"
+			}
+
+			if st == "date" {
+				st = "da(t)e"
+			} else {
+				st = "(" + string(st[0]) + ")" + string(st[1:])
+			}
+
+			label += st + " "
+		}
+
+		input.SetLabel(label)
+	}
+
+	setsort := func(t rune) {
+		var s, a string
+
+		switch t {
+		case 'a':
+			a = sortmethods[0]
+
+		case 'd':
+			a = sortmethods[1]
+
+		case 'f':
+			s = sortmethods[2]
+
+		case 't':
+			s = sortmethods[3]
+
+		case 'n':
+			s = sortmethods[4]
+		}
+
+		p.setSortMethod(s, a)
+		inputlabel()
+
+		p.ChangeDir(false, false)
+	}
+
+	inputlabel()
+
+	input.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Rune() {
+		case 'a', 'd', 'f', 't', 'n':
+			setsort(event.Rune())
+			return nil
+		}
+
+		p.table.InputHandler()(event, nil)
+		statuspgs.SwitchToPage("statusmsg")
+		app.SetFocus(p.table)
+
+		return event
+	})
+
+	statuspgs.AddAndSwitchToPage("sortinput", input, true)
+	app.SetFocus(input)
+}
+
 func (p *dirPane) showChangeDirInput() {
 	input := getStatusInput("Change Directory to:", false)
 	input.SetText(p.path)

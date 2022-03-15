@@ -16,10 +16,16 @@ import (
 	"golang.org/x/term"
 )
 
+type sortData struct {
+	sortBy    string
+	arrangeBy string
+}
+
 var (
 	dirWidth  int
 	dirLayout bool
 	pathLock  sync.Mutex
+	sortLock  sync.Mutex
 )
 
 func trimName(name string, length int, rev bool) string {
@@ -192,13 +198,7 @@ func (p *dirPane) doChangeDir(cdFwd bool, cdBack bool, tpath ...string) {
 
 	p.setPath(filepath.ToSlash(testPath))
 
-	sort.Slice(p.pathList, func(i, j int) bool {
-		if p.pathList[i].Mode.IsDir() != p.pathList[j].Mode.IsDir() {
-			return p.pathList[i].Mode.IsDir()
-		}
-
-		return p.pathList[i].Name < p.pathList[j].Name
-	})
+	p.sortDirList(p.pathList)
 
 	p.createDirList(cdFwd, cdBack, prevDir)
 }
@@ -454,4 +454,63 @@ func execCmd(cmdtext, emode, imode string) (*exec.Cmd, error) {
 	})
 
 	return cmd, err
+}
+
+func (p *dirPane) sortDirList(list []*adb.DirEntry) {
+	sortType, arrangeBy := p.getSortMethod()
+
+	sort.Slice(list, func(i, j int) bool {
+		var a, b int
+
+		if list[i].Mode.IsDir() != list[j].Mode.IsDir() {
+			return list[i].Mode.IsDir()
+		}
+
+		switch arrangeBy {
+		case "asc":
+			a, b = i, j
+
+		case "desc":
+			a, b = j, i
+		}
+
+		switch sortType {
+		case "filetype":
+			if list[a].Mode.IsDir() || list[b].Mode.IsDir() {
+				break
+			}
+
+			return filepath.Ext(list[a].Name) < filepath.Ext(list[b].Name)
+
+		case "date":
+			return list[a].ModifiedAt.Unix() < list[b].ModifiedAt.Unix()
+		}
+
+		return list[a].Name < list[b].Name
+	})
+}
+
+func (p *dirPane) getSortMethod() (string, string) {
+	sortLock.Lock()
+	defer sortLock.Unlock()
+
+	if p.sortMethod.sortBy == "" || p.sortMethod.arrangeBy == "" {
+		p.sortMethod.sortBy = "name"
+		p.sortMethod.arrangeBy = "asc"
+	}
+
+	return p.sortMethod.sortBy, p.sortMethod.arrangeBy
+}
+
+func (p *dirPane) setSortMethod(sortby, arrangeby string) {
+	sortLock.Lock()
+	defer sortLock.Unlock()
+
+	if sortby != "" {
+		p.sortMethod.sortBy = sortby
+	}
+
+	if arrangeby != "" {
+		p.sortMethod.arrangeBy = arrangeby
+	}
 }

@@ -12,19 +12,20 @@ import (
 )
 
 type dirPane struct {
-	row      int
-	path     string
-	apath    string
-	dpath    string
-	finput   string
-	filter   bool
-	hidden   bool
-	mode     ifaceMode
-	table    *tview.Table
-	plock    *semaphore.Weighted
-	entry    *adb.DirEntry
-	pathList []*adb.DirEntry
-	title    *tview.TextView
+	row        int
+	path       string
+	apath      string
+	dpath      string
+	finput     string
+	filter     bool
+	hidden     bool
+	mode       ifaceMode
+	table      *tview.Table
+	plock      *semaphore.Weighted
+	entry      *adb.DirEntry
+	pathList   []*adb.DirEntry
+	title      *tview.TextView
+	sortMethod sortData
 }
 
 var (
@@ -317,6 +318,9 @@ func setupPane(selPane, auxPane *dirPane) {
 
 		case '/':
 			selPane.showFilterInput()
+
+		case ';':
+			selPane.showSortDirInput()
 
 		case 's', '<':
 			selPane.modeSwitchHandler()
@@ -667,7 +671,7 @@ func (p *dirPane) setPaneTitle() {
 
 func (p *dirPane) setPaneSelectable(status bool) {
 	if status {
-		if p.table.HasFocus() && p.table.GetRowCount() > 0 {
+		if p.table.GetRowCount() > 0 {
 			p.table.SetSelectable(true, false)
 		}
 
@@ -754,6 +758,7 @@ func showHelp() {
 		"Rename files/folders ":                 "R",
 		"Filter entries":                        "/",
 		"Toggle filtering modes (normal/regex)": "/",
+		"Sort entries":                          ";",
 		"Clear filtered entries ":               "Ctrl+r",
 		"Select one item ":                      "Space",
 		"Invert selection ":                     "a",
