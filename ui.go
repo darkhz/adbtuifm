@@ -358,6 +358,7 @@ func setupPane(selPane, auxPane *dirPane) {
 	})
 
 	selPane.table.SetBorder(false)
+	selPane.table.SetSelectorWrap(true)
 	selPane.table.SetSelectable(true, false)
 	selPane.table.SetBackgroundColor(tcell.ColorDefault)
 
@@ -373,14 +374,13 @@ func setupPane(selPane, auxPane *dirPane) {
 		}
 
 		cell := selPane.table.GetCell(row, col)
-
-		if cell == nil {
+		if cell == nil || col > 0 {
 			return
 		}
 
-		selPane.table.SetSelectedStyle(tcell.Style{}.
-			Background(cell.Color).
-			Foreground(tcell.Color16).
+		cell.SetSelectedStyle(tcell.Style{}.
+			Foreground(cell.Color).
+			Background(tcell.Color16).
 			Attributes(cell.Attributes))
 	})
 
@@ -602,7 +602,9 @@ func (p *dirPane) updateDirPane(row int, sel bool, dir *adb.DirEntry) {
 				cell.SetAlign(tview.AlignRight)
 			}
 
-			cell.SetSelectable(false)
+			cell.SetSelectable(true)
+			cell.SetSelectedStyle(tcell.Style{}.
+				Attributes(tcell.AttrBold))
 		} else {
 			_, _, w, _ := pages.GetRect()
 			cell.SetMaxWidth(w - 40)
