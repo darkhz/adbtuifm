@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rivo/tview"
+	"github.com/darkhz/tview"
 	"github.com/schollz/progressbar/v3"
 	"golang.org/x/sync/semaphore"
 )

@@ -6,7 +6,7 @@ import (
 	"syscall"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/rivo/tview"
+	"github.com/darkhz/tview"
 	adb "github.com/zach-klippenstein/goadb"
 	"golang.org/x/sync/semaphore"
 )

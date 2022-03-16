@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/rivo/tview"
+	"github.com/darkhz/tview"
 	adb "github.com/zach-klippenstein/goadb"
 )
 

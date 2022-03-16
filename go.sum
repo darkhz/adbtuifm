@@ -8,6 +8,8 @@ github.com/darkhz/tview v0.0.0-20211228172150-5800db7c6a6b h1:8pY56HmzQ2wngTpBk5
 github.com/darkhz/tview v0.0.0-20211228172150-5800db7c6a6b/go.mod h1:WIfMkQNY+oq/mWwtsjOYHIZBuwthioY2srOmljJkTnk=
 github.com/darkhz/tview v0.0.0-20220107161156-11bd24e95a5c h1:BlPnBJkOodYLo+b/tH0yeYggoyERBSeSZxfGeLwUk2Q=
 github.com/darkhz/tview v0.0.0-20220107161156-11bd24e95a5c/go.mod h1:DEWp7u1h+s4JU/+LXJaRG37zuOyo+LGC1NjRat3GY3U=
+github.com/darkhz/tview v0.0.0-20220308065709-22f08247d788 h1:gFwRwKCBowpDrg0/9zy+YZBlapgvFY/K0Jd8A86jRX4=
+github.com/darkhz/tview v0.0.0-20220308065709-22f08247d788/go.mod h1:DEWp7u1h+s4JU/+LXJaRG37zuOyo+LGC1NjRat3GY3U=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
