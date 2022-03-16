@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/gdamore/tcell/v2"
 	"github.com/darkhz/tview"
+	"github.com/gdamore/tcell/v2"
 	adb "github.com/zach-klippenstein/goadb"
 	"golang.org/x/sync/semaphore"
 )
@@ -671,10 +671,7 @@ func (p *dirPane) setPaneTitle() {
 
 func (p *dirPane) setPaneSelectable(status bool) {
 	if status {
-		if p.table.GetRowCount() > 0 {
-			p.table.SetSelectable(true, false)
-		}
-
+		p.table.SetSelectable(true, false)
 		return
 	}
 
